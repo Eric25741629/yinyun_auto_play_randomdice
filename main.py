@@ -101,7 +101,6 @@ class ctrl_game():
                 self.click_position(383, 750)
             else:
                 break
-
         while True:
             if not self.check_result(196, 330, 97, 138):
                 print('合作模式第一層')
@@ -118,11 +117,6 @@ class ctrl_game():
                 self.click_position(365, 572)    
     def click_position(self, x, y):
         self.d.click(x/self.width, y/self.height)
-    def check_result(self, x1, y1, x2, y2):
-        result = self.get_str(x1, y1, x2, y2)
-        if not result:
-            return False
-        return True
     def check_ingame(self):
         result = self.get_str(144, 225, 12, 49) 
         if  result:
@@ -137,7 +131,6 @@ class ctrl_game():
             crop_img = img[710:800,290:510]
             result = reader.readtext(crop_img)
             for i in range(0,len(result)):
-                #print(result[i][1])
                 if '合作模式'in result[i][1]:
                     print('合作!!!')
                     return result[i+1][1].split("/")[0]
@@ -148,58 +141,32 @@ class ctrl_game():
                     self.d.click(320, 550)
                     time.sleep(1+random.random()*5)
                     self.d.click(320, 800)
-#reader = easyocr.Reader(['ch_tra'], gpu = True)     
-
-    
-    # bubble_sup()
-    #sup()
+    def begin_button(self):
+        while(1):
+            try:
+                try:
+                    img=self.d.screenshot(format='opencv')
+                except:
+                    img=self.d.screenshot(format='opencv')
+                crop_img = img[670:750,200:330]
+                b,g,r=crop_img[10,10]
+                if (b<=12 and b>=8 and g>=173 and g<=174 and r>=251 and r<=255):
+                    print('玩家皆進入房間')
+                    break
+            except:pass      
+        return 0
 def color(img,x,y):
     print(img[x,y])
-
-
-
-def into_mode(d):
-    
+def get_screenshot(d,format='opencv'):
     while(1):
-        d.click(450, 750) #第一個開啟
-        time.sleep(0.5)
-        try:
-            img=d.screenshot(format='opencv')
-        except:
-            img=d.screenshot(format='opencv')
-        crop_img = img[100:140,150:350]
-        #cv2.imshow("Image", crop_img)
-        #cv2.waitKey(0)
-        result = reader.readtext(crop_img)
-        print(result)
-        if(result!=[]):
-            if '合作模式' in result[0][1]:
-                break
-        time.sleep(0.5)
-
-def begin_button(d):
-    while(1):
-        try:
-            try:
-                img=d.screenshot(format='opencv')
-            except:
-                img=d.screenshot(format='opencv')
-            crop_img = img[670:750,200:330]
-            #color(crop_img,10,10)
-            b,g,r=crop_img[10,10]
-            #print(b,g,r)
-            if (b<=12 and b>=8 and g>=173 and g<=174 and r>=251 and r<=255):
-                print('玩家皆進入房間')
-                break
-        except:pass      
-    return 0
+        img=d.screenshot(format=format)
+        if img is not None:
+            break
+    return img
 def call_dice(d):
-    for i in range(0,5):
+    for _ in range(0,5):
         try:
-            try:
-                img=d.screenshot(format='opencv')
-            except:
-                img=d.screenshot(format='opencv')
+            img=get_screenshot(d)
             crop_img = img[750:830,230:310]
             b,g,r=crop_img[50,50]
             if(b in range(245,256) and g in range(245,256) and r in range(245,256)):
@@ -211,10 +178,7 @@ def level_up(d,dices):
     times=0
     while(1):
         level_list=[]
-        try:
-            img=d.screenshot(format='opencv')
-        except:
-            img=d.screenshot(format='opencv')
+        img=get_screenshot(d)
         for i in dices:
             crop_img = img[900:945,50+i*100:130+i*100]
             result = reader.readtext(crop_img)
@@ -238,10 +202,7 @@ def input_the_room_num(d,num):
 def check_into_game(d):
     while(1):
         #img=cv2.imread(r'E:/Screenshot_20220819-005635.png')
-        try:
-            img=d.screenshot(format='opencv')
-        except:
-            img=d.screenshot(format='opencv')
+        img=get_screenshot(d)
             
         img=img[733:800,370:485]
         ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)  # 二值化
@@ -252,14 +213,6 @@ def check_into_game(d):
                 print('已進入遊戲')
                 break
 
-def get_screenshot(d):
-    try:
-        img = d.screenshot(format='pillow')
-    except:
-        img = d.screenshot(format='pillow')
-    img = np.array(img)
-    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    return img
 
 def object_detection(img, model):
     results = model(img)
@@ -283,35 +236,25 @@ def placedicedector(place, d, i=-1, j=-1, mode='None'):
         place[y][x][1] = cs
         if y == i and j == x:
             return cs
-        #break
-        #time.sleep(0.3)
+
 
 
 def Stage(d):
-    times=0
-    while(1):
-        img=d.screenshot(format='opencv')
+    for i in range(0,3):
+        img = get_screenshot(d)
         img=img[15:50,120:250]
         ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)  # 二值化
         result = reader.readtext(binary)
         print(result)
-        
         if(result!=[]):
             numbers ="".join([x for x in result[0][1] if x.isdigit()])
-            #print((numbers))
-            try:
-                if(int(numbers)>15):
-                    return int(numbers)
-                else:
-                    return -1
-            except:
-                return -1
-        times=times+1
-        if(times>3):
-            return -1
+            if(int(numbers)>15):
+                return int(numbers)
+    return -1
+
 def end_game(d):
     try:
-        img=d.screenshot(format='opencv')
+        img = get_screenshot(d)
         img=img[850:890,240:320]   
         result = reader.readtext(img)       
         print(result) 
@@ -327,7 +270,7 @@ def end_game(d):
         pass
 def dice_number(d,mode,place):
     try:
-        image = d.screenshot(format='opencv')
+        image = get_screenshot(d)
         for i in range(0, 3):
             for j in range(0, 5):
                 pointx = j * 62 + 120
@@ -346,6 +289,7 @@ def dice_number(d,mode,place):
 def dice(d,place, want_to_use, dicelists,model,delt='none'):
     moving = 0
     can_list = []
+
     for dicelist in dicelists:
         for i in range(0, 3):
             for j in range(0, 5):
@@ -416,138 +360,148 @@ def no_check_dice(d,place, want_to_use, dicelists,model,delt='none'):
     #print(can_list)
     for i in range(0, 3):
         for j in range(0, 5):
-            if place[i,j,1]==want_to_use:
-                for k in range(0,len(can_list)):
-                    if can_list[k][0]==i and can_list[k][1]==j:
-                            continue
-                    if place[i,j,0]==can_list[k][2]:
-                        dice = placedicedector(
-                                place,d, i, j, mode=model)
-                        if(dice!=place[i,j,1]):
-                            #print('錯誤')
-                            break
-                        '''dice = placedicedector(
-                                place,d, can_list[k][0],can_list[k][1], mode=model)
-                        if(dice!=can_list[k][3]):
-                            print('錯誤')
-                            break'''
-                        #print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
-                        pointx = int(can_list[k][1])*62+120+30
-                        pointy = int(can_list[k][0])*60+480+30
-                        #print(i,j,can_list[k][1],can_list[k][1])
+            if place[i,j,1] != want_to_use:continue
+            for k in range(0,len(can_list)):
+                if can_list[k][0]==i and can_list[k][1]==j:
+                        continue
+                if place[i,j,0]==can_list[k][2]:
+                    dice = placedicedector(
+                            place,d, i, j, mode=model)
+                    if(dice!=place[i,j,1]):
+                        #print('錯誤')
+                        break
+                    '''dice = placedicedector(
+                            place,d, can_list[k][0],can_list[k][1], mode=model)
+                    if(dice!=can_list[k][3]):
+                        print('錯誤')
+                        break'''
+                    #print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
+                    pointx = int(can_list[k][1])*62+120+30
+                    pointy = int(can_list[k][0])*60+480+30
+                    #print(i,j,can_list[k][1],can_list[k][1])
+                    touchtime = (
+                            sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.0001)
+                    d.touch.down(
+                            x=j*62+150, y=i*60+500)  # 模拟按下        
+                    time.sleep(touchtime.real)
+                    d.touch.move(x=int((pointx+j*62+150)/2), y=int((pointy+i*60+500)/2))  # 模拟移动
+                    time.sleep(touchtime.real)
+                    d.touch.move(x=pointx, y=pointy)
+                    time.sleep(touchtime.real)
+                    d.touch.up(x=pointx, y=pointy)
+                    #dice = placedicedector(
+                    #        place,d, i, j, mode=model)
+                    #if dice != want_to_use:
+                    #    print('確認使用成功')
+                    #    moving = moving+1
+                    if delt=='none':
+                        can_list.pop(k)
+                        for _ in range(0,len(can_list)):
+                            try:
+                                if can_list[_][0]==i and can_list[_][1]==j:
+                                    can_list.pop(_)
+                                    break
+                            except Exception as err:
+                                print(err)
+                                pass
+                        place[i,j,0]=-2
+                        place[i,j,1]=-2
+                        d.click(270, 830) 
+                        break
+                    else:
+                        break    
+    return moving
+def move_dice(d,x1,y1,x2,y2,duringtime=0.1):
+    d.touch.down( x=j*62+150, y=i*60+510)  # 模拟按下
+    # down 和 move 之间的延迟，自己控制
+    time.sleep(duringtime.real)
+    d.touch.move(x=pointx//2, y=pointy//2)  # 模拟移动
+    time.sleep(duringtime.real)
+    d.touch.move(x=pointx, y=pointy)  # 模拟移动
+    d.touch.up(x=pointx, y=pointy)
+def attack_dice(d,place,model):
+    #待改
+    for i in range(0, 3):
+        for j in range(0, 5):
+            if int (place[i][j][1]) != 2:continue
+            try:
+                yinyuns = np.where(place[:, :, 1] == 1)
+                print(yinyuns)
+                if not yinyuns:
+                    break
+                listOfIndices = list(zip(yinyuns[0], yinyuns[1]))
+                lenth = len(listOfIndices)
+                # 目標
+                for times in range(0, lenth):
+                    pointx = int(
+                        listOfIndices[times][1]) * 60 + 120 + 30
+                    pointy = int(
+                        listOfIndices[times][0]) * 60 + 480 + 30
+                    #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
+                    dice = placedicedector(
+                        place,d, i, j, mode=model)
+                    if dice != 2:
+                        #print('確認複製成功')
+                        break
+                    else:
                         touchtime = (
-                                sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.0001)
+                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.0001)
+                        # print(touchtime)
                         d.touch.down(
-                                x=j*62+150, y=i*60+500)  # 模拟按下        
+                            x=j*62+150, y=i*60+510)  # 模拟按下
+                        # down 和 move 之间的延迟，自己控制
                         time.sleep(touchtime.real)
-                        d.touch.move(x=int((pointx+j*62+150)/2), y=int((pointy+i*60+500)/2))  # 模拟移动
-                        time.sleep(touchtime.real)
-                        d.touch.move(x=pointx, y=pointy)
+                        d.touch.move(x=pointx, y=pointy)  # 模拟移动
                         time.sleep(touchtime.real)
                         d.touch.up(x=pointx, y=pointy)
-                        #dice = placedicedector(
-                        #        place,d, i, j, mode=model)
-                        #if dice != want_to_use:
-                        #    print('確認使用成功')
-                        #    moving = moving+1
-                        if delt=='none':
-                            can_list.pop(k)
-                            for _ in range(0,len(can_list)):
-                                try:
-                                    if can_list[_][0]==i and can_list[_][1]==j:
-                                        can_list.pop(_)
-                                        break
-                                except Exception as err:
-                                    print(err)
-                                    pass
-                            place[i,j,0]=-2
-                            place[i,j,1]=-2
-                            d.click(270, 830) 
-                            break
-                        else:
-                            break    
-    return moving
-def attack_dice(d,place,model):
-    for i in range(0, 3):
-        for j in range(0, 5):
-            if (int(place[i][j][1]) == 2):
-                try:
-                    yinyuns = np.where(place[:, :, 1] == 1)
-                    print(yinyuns)
-                    if not yinyuns:
-                        break
-                    listOfIndices = list(zip(yinyuns[0], yinyuns[1]))
-                    lenth = len(listOfIndices)
-                    # 目標
-                    for times in range(0, lenth):
-                        pointx = int(
-                            listOfIndices[times][1]) * 60 + 120 + 30
-                        pointy = int(
-                            listOfIndices[times][0]) * 60 + 480 + 30
-                        #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
-                        dice = placedicedector(
-                            place,d, i, j, mode=model)
-                        if dice != 2:
-                            #print('確認複製成功')
-                            break
-                        else:
-                            touchtime = (
-                                sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.0001)
-                            # print(touchtime)
-                            d.touch.down(
-                                x=j*62+150, y=i*60+510)  # 模拟按下
-                            # down 和 move 之间的延迟，自己控制
-                            time.sleep(touchtime.real)
-                            d.touch.move(x=pointx, y=pointy)  # 模拟移动
-                            time.sleep(touchtime.real)
-                            d.touch.up(x=pointx, y=pointy)
-                            time.sleep(1)
+                        time.sleep(1)
 
-                            #d.swipe_points(
-                            #    [(j * 60 + 150, i * 60 + 550), (pointx, pointy)], touchtime.real)
-                            #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
-                        time.sleep(1)
-                except Exception as err:
-                    print(err)
-                    pass   
+                        #d.swipe_points(
+                        #    [(j * 60 + 150, i * 60 + 550), (pointx, pointy)], touchtime.real)
+                        #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
+                    time.sleep(1)
+            except Exception as err:
+                print(err)
+                pass   
     for i in range(0, 3):
         for j in range(0, 5):
-            if (int(place[i][j][1]) == 3):         
-                try:
-                    yinyuns = np.where(place[:, :, 1] == 1)
-                    if not yinyuns:
+            if int (place[i][j][1]) != 3:continue
+              
+            try:
+                yinyuns = np.where(place[:, :, 1] == 1)
+                if not yinyuns:
+                    break
+                listOfIndices = list(zip(yinyuns[0], yinyuns[1]))
+                lenth = len(listOfIndices)
+                # 目標
+                for times in range(0, lenth):
+                    pointx = int(
+                        listOfIndices[times][1]) * 62 + 120 + random.randint(25,40)
+                    pointy = int(
+                        listOfIndices[times][0]) * 62 + 470 + random.randint(25,40)
+                    #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
+                    dice = placedicedector(
+                        place,d, i, j, mode=model)
+                    if dice != 3:
+                        #print('確認複製成功')
                         break
-                    listOfIndices = list(zip(yinyuns[0], yinyuns[1]))
-                    lenth = len(listOfIndices)
-                    # 目標
-                    for times in range(0, lenth):
-                        pointx = int(
-                            listOfIndices[times][1]) * 62 + 120 + random.randint(25,40)
-                        pointy = int(
-                            listOfIndices[times][0]) * 62 + 470 + random.randint(25,40)
-                        #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
-                        dice = placedicedector(
-                            place,d, i, j, mode=model)
-                        if dice != 3:
-                            #print('確認複製成功')
-                            break
-                        else:
-                            touchtime = (
-                                sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 550 - pointy, 2)) * 0.0001)
-                            # print(touchtime)
-                            d.touch.down(
-                                x=j*62+150, y=i*60+500)  # 模拟按下
-                            # down 和 move 之间的延迟，自己控制
-                            time.sleep(touchtime.real)
-                            d.touch.move(x=pointx, y=pointy)  # 模拟移动
-                            time.sleep(touchtime.real)
-                            d.touch.up(x=pointx, y=pointy)
-                            time.sleep(1)
-                            #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
-                        time.sleep(1)
-                except Exception as err:
-                    print(err)
-                    pass   
+                    else:
+                        touchtime = (
+                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 550 - pointy, 2)) * 0.0001)
+                        # print(touchtime)
+                        d.touch.down(
+                            x=j*62+150, y=i*60+500)  # 模拟按下
+                        # down 和 move 之间的延迟，自己控制
+                        time.sleep(touchtime.real)
+                        d.touch.move(x=pointx, y=pointy)  # 模拟移动
+                        time.sleep(touchtime.real)
+                        d.touch.up(x=pointx, y=pointy)
+                        time.sleep(0.5)
+                        #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
+                    time.sleep(0.5)
+            except Exception as err:
+                print(err)
+                pass   
 dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
 def attack(d,model,q):
     i = 1
@@ -556,19 +510,18 @@ def attack(d,model,q):
     place = np.full((column, row, height), -1)
     stage=0
     put=0
+    check=0
     while (1):
         
         stage=max(Stage(d),stage)
-        sct(d)
+        #sct(d)
         if(stage>20 and put==0):
             q.put(1)
             put=1
         moving=0
         call_dice(d)
         placedicedector(place,d=d, mode=model)
-        #dices_num = np.count_nonzero(place)
         dices_num = len([b for a in place for b in a if b[1]>=0])
-        #dices_num = len(place[place >= 0])
         if (dices_num >= 0):
             dice_number(d,'attack',place)
         #dices_num = len([b for a in place for b in a if b[0]>=0])
@@ -602,7 +555,9 @@ def attack(d,model,q):
         yinyun_num = np.sum(place[:, :,1] == 1)
         if (yinyun_num == 15):
             print('滿版陰陽')
-            return 1
+            check+=1
+            if(check==3):
+                return 1
         i=end_game(d)
         if(i==1):
             return 0
@@ -616,7 +571,7 @@ def sup(d,reconciliation,model):
         if(check==0):
             break
         stage=Stage(d)
-        sct(d)
+        #sct(d)
         if(stage>reconciliation):
             return 0
         call_dice(d)
@@ -664,7 +619,7 @@ def bubble_sup(d,reconciliation,model):
         check=in_the_game(d)
         if(check==0):
             break
-        sct(d)
+        #sct(d)
         stage=Stage(d)
         call_dice(d)
         if(stage>reconciliation):
@@ -756,7 +711,7 @@ def dicer_att(adb_devices,q):
     roomnum=attctrl.room_num()
     print(roomnum)
     q.put(roomnum)
-    begin_button(d)
+    attctrl.begin_button(d)
     d.click(250, 700)  
     while(not attctrl.check_ingame()):pass
     check=attack(d,attackmodel,q)
