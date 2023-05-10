@@ -711,7 +711,7 @@ def dicer_att(adb_devices,q):
     roomnum=attctrl.room_num()
     print(roomnum)
     q.put(roomnum)
-    attctrl.begin_button(d)
+    attctrl.begin_button()
     d.click(250, 700)  
     while(not attctrl.check_ingame()):pass
     check=attack(d,attackmodel,q)
@@ -752,9 +752,9 @@ def sct(d):
       
 reader = easyocr.Reader(['ch_tra'], gpu = True)     
 supmodel = torch.hub.load('ultralytics/yolov5',
-    'custom', path=r'D:\dice_py/best_sup.pt')
+    'custom', path=r'D:\dice_py\yinyun_auto_play\best_sup.pt')
 attackmodel = torch.hub.load(
-        'ultralytics/yolov5', 'custom', path=r'D:\dice_py/best(2).pt')
+        'ultralytics/yolov5', 'custom', path=r'D:\dice_py\yinyun_auto_play\best(2).pt')
 if __name__ == '__main__':
     os.system("adb devices")
     for i in range(30):
