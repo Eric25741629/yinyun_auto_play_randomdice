@@ -22,6 +22,8 @@ class ctrl_game():
         self.reader=reader
         self.q=q
         self.act=act
+        self.height=960
+        self.width=540
     def get_str(self,x1,x2,y1,y2):
         while(1):
             img=self.d.screenshot(format='opencv')
@@ -115,7 +117,7 @@ class ctrl_game():
             else:
                 self.click_position(365, 572)    
     def click_position(self, x, y):
-        self.d.click(x/540, y/960)
+        self.d.click(x/self.width, y/self.height)
     def check_result(self, x1, y1, x2, y2):
         result = self.get_str(x1, y1, x2, y2)
         if not result:
@@ -126,6 +128,26 @@ class ctrl_game():
         if  result:
             return True
         return False
+    def check_times(self):
+        while(1):
+            try:
+                img= self.d.screenshot(format='opencv')
+            except:
+                img = self.d.screenshot(format='opencv')
+            crop_img = img[710:800,290:510]
+            result = reader.readtext(crop_img)
+            for i in range(0,len(result)):
+                #print(result[i][1])
+                if '合作模式'in result[i][1]:
+                    print('合作!!!')
+                    return result[i+1][1].split("/")[0]
+                elif '30' in result[i][1]:
+                    print('沒次數,鑽石補充')
+                    self.d.click(450,740)
+                    time.sleep(1+random.random()*5)
+                    self.d.click(320, 550)
+                    time.sleep(1+random.random()*5)
+                    self.d.click(320, 800)
 #reader = easyocr.Reader(['ch_tra'], gpu = True)     
 
     
@@ -133,29 +155,8 @@ class ctrl_game():
     #sup()
 def color(img,x,y):
     print(img[x,y])
-def check_times(d):
-    while(1):
-        try:
-            img= d.screenshot(format='opencv')
-        except:
-            img = d.screenshot(format='opencv')
-        crop_img = img[710:800,290:510]
-        result = reader.readtext(crop_img)
-        for i in range(0,len(result)):
-            #print(result[i][1])
-            if '合作模式'in result[i][1]:
-                print('合作!!!')
-                return result[i+1][1].split("/")[0]
-            elif '30' in result[i][1]:
-                print('沒次數,鑽石補充')
-                d.click(450,740)
-                time.sleep(1+random.random()*5)
-                d.click(320, 550)
-                time.sleep(1+random.random()*5)
-                d.click(320, 800)
-    #cv2.imwrite('co_op.jpg', image)
-    #cv2.imshow("Image", crop_img)
-    #cv2.waitKey(0)
+
+
 
 def into_mode(d):
     
