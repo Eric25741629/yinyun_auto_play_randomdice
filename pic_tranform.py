@@ -39,7 +39,6 @@ def HoughCircles_Count_dice_num(img):
 def Area_Count_dice_num(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     ret, binary = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
-
     #binary=cv2.GaussianBlur(binary,(7, 7),5 )
     #binary = cv2.GaussianBlur(binary, (5, 5), 0)
     #cv2.imshow("x", binary)
@@ -76,8 +75,8 @@ def yinyun_num(img):
             continue
         count += 1  # 總體計數加1
     # print(count)
-    #cv2.imshow("img", binary)
-    #cv2.imshow("ori", img)
+    # cv2.imshow("img", binary)
+    # cv2.imshow("ori", img)
     # cv2.waitKey(0)
     return count
 
@@ -111,7 +110,8 @@ def jocker_num(img):
         can = cv2.dilate(can, kernel, iterations=1)
         kernel = np.ones((5, 5), np.uint8)
         erosion = cv2.erode(can, kernel, iterations=1)
-        #cv2.imshow('123',erosion)
+        # cv2.imshow('123',erosion)
+        # cv2.waitKey(0)
         circles = cv2.HoughCircles(erosion, cv2.HOUGH_GRADIENT, 1, 50, param1=2, param2=8, minRadius=20, maxRadius=30)
         circles = np.uint16(np.around(circles))
         #print(len(circles[0]))
@@ -157,6 +157,7 @@ def dice_num(img,mode, type=-1):
     if(mode=='sup'):
         try:
             if (type == 0 or type == 1 ):
+                print('jocker')
                 count = jocker_num(img)
             else :
                 count = Area_Count_dice_num(img)
@@ -175,7 +176,7 @@ def dice_num(img,mode, type=-1):
     else:
         try:
             if (type == 2):
-                count = max(jocker_num(img)-1,1)
+                count = jocker_num(img)
             elif(type==1):
                 count = yinyun_num(img)
             else :
