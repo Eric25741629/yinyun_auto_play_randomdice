@@ -90,9 +90,9 @@ class ctrl_game():
             elif '30' in str(result) or '0/10'in str(result):
                 print('沒次數,鑽石補充')
                 self.d.click(450,740)
-                time.sleep(1+random.random()*5)
+                time.sleep(2+random.random()*5)
                 self.d.click(320, 550)
-                time.sleep(1+random.random()*5)
+                time.sleep(2+random.random()*5)
                 self.d.click(320, 800)  #確認
         while True:
             result = self.get_str(370, 485, 733, 800)
@@ -137,9 +137,9 @@ class ctrl_game():
                 elif '30' in result[i][1]:
                     print('沒次數,鑽石補充')
                     self.d.click(450,740)
-                    time.sleep(1+random.random()*5)
+                    time.sleep(2+random.random()*5)
                     self.d.click(320, 550)
-                    time.sleep(1+random.random()*5)
+                    time.sleep(2+random.random()*5)
                     self.d.click(320, 800)
     def begin_button(self):
         while(1):
@@ -193,12 +193,7 @@ def level_up(d,dices):
             d.click(80+i*100+int(random.random()*10), 900) 
         time.sleep(2)
         
-def input_the_room_num(d,num):
-    print(num)
-    d.click(270, 460) 
-    os.system("adb -s emulator-5560 shell input text %04d"%num)
-    time.sleep(0.3)
-    d.click(270, 600)
+
 def check_into_game(d):
     while(1):
         #img=cv2.imread(r'E:/Screenshot_20220819-005635.png')
@@ -237,20 +232,19 @@ def placedicedector(place, d, i=-1, j=-1, mode='None'):
         if y == i and j == x:
             return cs
 
-
-
 def Stage(d):
     for i in range(0,3):
         img = get_screenshot(d)
         img=img[15:50,120:250]
         ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)  # 二值化
         result = reader.readtext(binary)
-        print(result)
+        #print(result)
         if(result!=[]):
             numbers ="".join([x for x in result[0][1] if x.isdigit()])
-            if(int(numbers)>15):
+            if numbers:
+                print('關卡:',int(numbers))
                 return int(numbers)
-    return -1
+    return 0
 
 def end_game(d):
     try:
@@ -275,7 +269,7 @@ def dice_number(d,mode,place):
             for j in range(0, 5):
                 pointx = j * 62 + 120
                 pointy = i * 60 + 480
-                img = image[pointy + 13:pointy +
+                img = image[pointy + 15:pointy +
                             50, pointx + 5:pointx + 48]
                 x, y = dice_num(img,mode, int(place[i][j][1]))
                 #print(x, y)
@@ -755,6 +749,8 @@ supmodel = torch.hub.load('ultralytics/yolov5',
     'custom', path=r'D:\dice_py\yinyun_auto_play\best_sup.pt')
 attackmodel = torch.hub.load(
         'ultralytics/yolov5', 'custom', path=r'D:\dice_py\yinyun_auto_play\best(2).pt')
+attackmodel.conf = 0.6
+supmodel.conf = 0.6
 if __name__ == '__main__':
     os.system("adb devices")
     for i in range(30):
