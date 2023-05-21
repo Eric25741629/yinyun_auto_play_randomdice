@@ -157,7 +157,7 @@ class ctrl_game():
                     print('沒次數,廣告補充')
                     #todo
 
-                    
+
                     # print('沒次數,鑽石補充')
                     # self.d.click(450,740)
                     # time.sleep(2+random.random()*5)
@@ -724,6 +724,11 @@ def dicer_att(adb_devices,q):
     attctrl=ctrl_game(adb_devices,reader,q) 
     while(attctrl.check_ingame()):pass
     d = attctrl.d
+    count=1
+    if (count==1):
+        shop=Store_Refresh.Shop(d,reader=reader)
+        if(shop.buy_and_fresh()):
+            threading.Thread(target=reset).start()
     attctrl.opengame()
     attctrl.open_room()
     roomnum=attctrl.room_num()
@@ -785,7 +790,7 @@ def reset():
 global count
 if __name__ == '__main__':
     os.system("adb devices")
-    count=1
+    
     for i in range(30):
         try:
             f = open('D:\record.txt', "a+")
@@ -807,10 +812,7 @@ if __name__ == '__main__':
         tsup.start()
         tatt.join()
         tsup.join()
-        if (count==1):
-            shop=Store_Refresh.Shop(d=u2.connect('emulator-5558'),reader=reader)
-            if(shop.buy_and_fresh()):
-                threading.Thread(target=reset).start()
+        
 
 
     
