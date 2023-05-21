@@ -18,6 +18,7 @@ from pic_tranform import *
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
         self.d=u2.connect(devices_ip) # 手機的IP
+
         self.devices_ip=devices_ip
         self.reader=reader
         self.q=q
@@ -39,12 +40,29 @@ class ctrl_game():
         currentApp = self.d.app_list_running()
         if "com.percent.royaldice" not in currentApp:
             self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
+        t=time.time()
+        count=0
         while(1):
             result=self.get_str(370,485,733,800)
-            
             if len(result)>0:
+                result=self.get_str(370,485,733,800)
                 if result[0][1]=='合作模式' or result[0][1]=='30' or result[0][1]=='0/10':
-                        break
+                    break
+            if(time.time()-t>90):
+                print("open game fail")
+                self.d.press("back")
+            time.sleep(0.5)
+            if(time.time()-t>120):
+                print("open game fail")
+                t=time.time()
+                self.d.app_stop("com.percent.royaldice")
+                time.sleep(0.5)
+                self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
+            if count>10:
+                while(1):
+                    print('open game fail')
+                    time.sleep(1)
+
         print('進入主頁')
     def check_result(self, x1, y1, x2, y2):
         result = self.get_str(x1, y1, x2, y2)
@@ -96,6 +114,7 @@ class ctrl_game():
                 self.d.click(320, 800)  #確認
         while True:
             result = self.get_str(370, 485, 733, 800)
+            print(result)
             if result and result[0][1] == '合作模式': 
                 print('合作模式第一層')
                 self.click_position(383, 750)
@@ -105,7 +124,7 @@ class ctrl_game():
             if not self.check_result(196, 330, 97, 138):
                 print('合作模式第一層')
                 break        
-            self.click_position(158, 808)
+            self.click_position(193, 871)
         while True:
             print(1)
             result=self.get_str(134, 404, 269, 321)
@@ -135,12 +154,16 @@ class ctrl_game():
                     print('合作!!!')
                     return result[i+1][1].split("/")[0]
                 elif '30' in result[i][1]:
-                    print('沒次數,鑽石補充')
-                    self.d.click(450,740)
-                    time.sleep(2+random.random()*5)
-                    self.d.click(320, 550)
-                    time.sleep(2+random.random()*5)
-                    self.d.click(320, 800)
+                    print('沒次數,廣告補充')
+                    #todo
+
+                    
+                    # print('沒次數,鑽石補充')
+                    # self.d.click(450,740)
+                    # time.sleep(2+random.random()*5)
+                    # self.d.click(320, 550)
+                    # time.sleep(2+random.random()*5)
+                    # self.d.click(320, 800)
     def begin_button(self):
         while(1):
             try:
@@ -449,7 +472,6 @@ def attack_dice(d,place,model):
                         time.sleep(touchtime.real)
                         d.touch.up(x=pointx, y=pointy)
                         time.sleep(1)
-
                         #d.swipe_points(
                         #    [(j * 60 + 150, i * 60 + 550), (pointx, pointy)], touchtime.real)
                         #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
@@ -574,7 +596,7 @@ def sup(d,reconciliation,model):
         location = len(place[place >= 0])
         if (location >= 8):
             dice_number(d,'sup',place)
-        moving += dice(d,place, 1, [2, 3],model,'del')
+        moving += dice(d,place, 1, [2],model,'del')
         placedicedector(place,d=d, mode=model)
         dice_number(d,'sup',place)
         moving += dice(d,place, 3, [3],model)
@@ -585,7 +607,9 @@ def sup(d,reconciliation,model):
         dice_number(d,'sup',place)
         moving += dice(d,place, 3, [3, 0],model)
         if (moving == 0):
-            dice(d,place, 0, [0],model)
+            moving += dice(d,place, 1, [3],model)
+            if (moving == 0):
+                dice(d,place, 0, [0],model)
         print('moving'+str(moving))
         place = np.full((column, row, height), -1)
         i=end_game(d)
@@ -751,8 +775,17 @@ attackmodel = torch.hub.load(
         'ultralytics/yolov5', 'custom', path=r'D:\dice_py\yinyun_auto_play\best(2).pt')
 attackmodel.conf = 0.6
 supmodel.conf = 0.6
+import watchAd
+import Store_Refresh
+def reset():
+    global count
+    count=0
+    time.sleep(21500)
+    count=1
+global count
 if __name__ == '__main__':
     os.system("adb devices")
+    count=1
     for i in range(30):
         try:
             f = open('D:\record.txt', "a+")
@@ -774,6 +807,10 @@ if __name__ == '__main__':
         tsup.start()
         tatt.join()
         tsup.join()
+        if (count==1):
+            shop=Store_Refresh.Shop(d=u2.connect('emulator-5558'),reader=reader)
+            if(shop.buy_and_fresh()):
+                threading.Thread(target=reset).start()
 
 
     

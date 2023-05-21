@@ -157,7 +157,7 @@ def dice_num(img,mode, type=-1):
     if(mode=='sup'):
         try:
             if (type == 0 or type == 1 ):
-                print('jocker')
+                #print('jocker')
                 count = jocker_num(img)
             else :
                 count = Area_Count_dice_num(img)
