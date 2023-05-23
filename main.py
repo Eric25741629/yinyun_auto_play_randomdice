@@ -18,7 +18,7 @@ from pic_tranform import *
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
         self.d=u2.connect(devices_ip) # 手機的IP
-
+        self.AD=watchAd.watchAD(self.d)
         self.devices_ip=devices_ip
         self.reader=reader
         self.q=q
@@ -35,7 +35,16 @@ class ctrl_game():
             return result
         else:
             return []
-
+    def updata_game(self):
+        self.d.click(368,590)
+        t=time.time()
+        while(time.time()-t<30):
+            if(self.d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[1]/android.view.View[2]').exists):
+                self.d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[1]/android.view.View[2]').click()
+                break
+        while(not self.d.xpath('//*[@content-desc="開始玩"]').exists):
+            print('start') 
+        self.d.xpath('//*[@content-desc="開始玩"]').click()  
     def opengame(self):
         currentApp = self.d.app_list_running()
         if "com.percent.royaldice" not in currentApp:
@@ -43,6 +52,11 @@ class ctrl_game():
         t=time.time()
         count=0
         while(1):
+            img=self.d.screenshot(format='opencv')
+            text=self.reader.readtext(img,detail=0)
+            if ('應用程式版本不同'in text):
+                print('需要更新')
+                self.updata_game()
             result=self.get_str(370,485,733,800)
             if len(result)>0:
                 result=self.get_str(370,485,733,800)
@@ -98,15 +112,56 @@ class ctrl_game():
         os.system("adb -s "+self.devices_ip+" shell input text %04d"%num)
         self.d.click(270, 600)
         self.d.click(270, 600)
+    def watch_ad_to_openroom(self):
+        count=1
+        while(1):
+            img = self.d.screenshot(format='opencv')
+            self.d.click(500,706)
+            time.sleep(0.5)
+            text=reader.readtext(img, detail=0)
+            print(text)
+            if ('通知'in text and  '正在載入廣告'in  text and  '請稍後重試'in text and  '確認'in text):
+                self.d.click(265, 592)
+                count+=1
+            if(count>3):
+                print('商店補充失敗')
+                self.d.app_stop("com.percent.royaldice")
+                time.sleep(0.5)
+                self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
+                self.opengame()
+                break 
+            self.AD.watchvideo()
+            time.sleep(2)
+            if (Store_Refresh.Shop(self.d,self.reader).checkinshop()):
+                print('商店補充成功')
+                break
+            else:
+                print('商店補充失敗')
+                self.d.app_stop("com.percent.royaldice")
+                time.sleep(0.5)
+                self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
+                self.opengame()
+                break
     def open_room(self):
         while True:
             result = self.get_str(370, 485, 733, 800)
             print(result)
+            img=self.d.screenshot(format='opencv')
+            text=self.reader.readtext(img, detail=0)
+            if ('任務'in text and '主要任務'in  text and  '每日任務'in  text):
+                self.d.click(0.896, 0.072)
             if result and result[0][1] == '合作模式': 
                 print('合作!!!')
                 break
             elif '30' in str(result) or '0/10'in str(result):
-                print('沒次數,鑽石補充')
+                print('沒次數,廣告補充')
+                # self.watch_ad_to_openroom()
+                # if not check:
+                #     print('廣告失敗')
+                #     while(1):
+                #         time.sleep(1)
+                # self.opengame()
+                # self.open_room()
                 self.d.click(450,740)
                 time.sleep(2+random.random()*5)
                 self.d.click(320, 550)
