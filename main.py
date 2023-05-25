@@ -1,6 +1,5 @@
 import os
 import random
-import shutil
 import threading
 import time
 from cmath import sqrt
@@ -14,7 +13,11 @@ import torch
 import uiautomator2 as u2
 from adbutils import adb
 
+import Store_Refresh
+import watchAd
 from pic_tranform import *
+
+
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
         self.d=u2.connect(devices_ip) # 手機的IP
@@ -26,34 +29,35 @@ class ctrl_game():
         self.height=960
         self.width=540
     def get_str(self,x1,x2,y1,y2):
-        while(1):
-            img=self.d.screenshot(format='opencv')
+        while 1:
+            img=get_screenshot(self.d)# self.d.screenshot(format='opencv')
             img=cv2.cvtColor(img[y1:y2,x1:x2],cv2.COLOR_BGR2GRAY)
             break
-        result=self.reader.readtext(img)
+        result=self.reader.readtext(img) # replace () with []
         if len(result)>0:
             return result
         else:
             return []
+
     def updata_game(self):
         self.d.click(368,590)
         t=time.time()
-        while(time.time()-t<30):
-            if(self.d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[1]/android.view.View[2]').exists):
+        while time.time()-t<30:
+            if self.d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[1]/android.view.View[2]').exists: # type: ignore
                 self.d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[1]/android.view.View[2]').click()
                 break
-        while(not self.d.xpath('//*[@content-desc="開始玩"]').exists):
+        while not self.d.xpath('//*[@content-desc="開始玩"]'):
             print('start') 
-        self.d.xpath('//*[@content-desc="開始玩"]').click()  
+        self.d.xpath('//*[@content-desc="開始玩"]')()
     def opengame(self):
         currentApp = self.d.app_list_running()
         if "com.percent.royaldice" not in currentApp:
             self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
         t=time.time()
         count=0
-        while(1):
+        while 1:
             img=self.d.screenshot(format='opencv')
-            text=self.reader.readtext(img,detail=0)
+            text=self.reader.readtext(img,detail=0) # replace () with []
             if ('應用程式版本不同'in text):
                 print('需要更新')
                 self.updata_game()
@@ -62,18 +66,18 @@ class ctrl_game():
                 result=self.get_str(370,485,733,800)
                 if result[0][1]=='合作模式' or result[0][1]=='30' or result[0][1]=='0/10':
                     break
-            if(time.time()-t>90):
+            if time.time()-t>90:
                 print("open game fail")
                 self.d.press("back")
             time.sleep(0.5)
-            if(time.time()-t>120):
+            if time.time()-t>120:
                 print("open game fail")
                 t=time.time()
                 self.d.app_stop("com.percent.royaldice")
                 time.sleep(0.5)
                 self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
             if count>10:
-                while(1):
+                while 1:
                     print('open game fail')
                     time.sleep(1)
 
@@ -85,7 +89,7 @@ class ctrl_game():
             return True
         return False
     def with_friend_attack(self):
-        while(1):
+        while 1:
             self.d.click(200, 850)  #與好友一起遊戲
             time.sleep(0.5)
             try:
@@ -93,9 +97,9 @@ class ctrl_game():
             except:
                 img=self.d.screenshot(format='opencv')
             crop_img = img[280:320,140:400]
-            result = self.reader.readtext(crop_img)
+            result = self.reader.readtext[crop_img] # replace () with []
             print(result)
-            if(result!=[]):
+            if result!=[]:
                 if '與好友一起進行遊戲' in result[0][1]:
                     break
         self.d.click(200, 550) 
@@ -198,12 +202,8 @@ class ctrl_game():
         return False
     def check_times(self):
         while(1):
-            try:
-                img= self.d.screenshot(format='opencv')
-            except:
-                img = self.d.screenshot(format='opencv')
-            crop_img = img[710:800,290:510]
-            result = reader.readtext(crop_img)
+            crop_img=crop_image(get_screenshot(self.d), 290, 710, 510, 800)
+            result = self.reader.readtext(crop_img)
             for i in range(0,len(result)):
                 if '合作模式'in result[i][1]:
                     print('合作!!!')
@@ -219,6 +219,7 @@ class ctrl_game():
                     # self.d.click(320, 550)
                     # time.sleep(2+random.random()*5)
                     # self.d.click(320, 800)
+
     def begin_button(self):
         while(1):
             try:
@@ -233,14 +234,39 @@ class ctrl_game():
                     break
             except:pass      
         return 0
+#遊玩中控制類
+class play():
+    def __init__(self,d,reader,act,model):
+        self.d=d
+        self.reader=reader
+        self.width, self.height = self.d.window_size()
+        self.act=act
+        self.model=model
+
+        #一個3*5*2的矩陣
+        self.place=np.zeros((3,5,2)).fill(-1)
+    def get_dice_type_and_num(self, who=None,path=None):
+        time.sleep(0.2)
+        if who == 'test':
+            image=cv2.imread(path)
+        else:
+            while(1):
+                image = self.d.screenshot(format='opencv')
+                if image is not None:
+                    break
+        self.place.fill(-1) 
+        
+#class game
 def color(img,x,y):
     print(img[x,y])
-def get_screenshot(d,format='opencv'):
-    while(1):
-        img=d.screenshot(format=format)
-        if img is not None:
-            break
+def get_screenshot(d, format='opencv'):
+    img = None
+    while img is None:
+        img = d.screenshot(format=format)
     return img
+
+def crop_image(img, x1, y1, x2, y2):
+    return img[y1:y2, x1:x2]
 def call_dice(d):
     for _ in range(0,5):
         try:
@@ -268,7 +294,9 @@ def level_up(d,dices):
             if(times>2):
                 break
         for i in level_list:
-            d.click(80+i*100+int(random.random()*10), 900) 
+            for _ in range(0,random.randint(3,4)):
+                d.click(80+i*100+int(random.random()*10), 900)
+            #d.click(80+i*100+int(random.random()*10), 900) 
         time.sleep(2)
         
 
@@ -293,7 +321,7 @@ def object_detection(img, model):
     return results
 
 def get_dice_value(x, y):
-    return int((x - 115) / 60), int((y - 475) / 60)
+    return int((x - 115) // 60), int((y - 475) // 60)
 
 def placedicedector(place, d, i=-1, j=-1, mode='None'):
     time.sleep(0.2)
@@ -358,6 +386,7 @@ def dice_number(d,mode,place):
                     pass
     except:
         pass
+ 
 def dice(d,place, want_to_use, dicelists,model,delt='none'):
     moving = 0
     can_list = []
@@ -385,20 +414,14 @@ def dice(d,place, want_to_use, dicelists,model,delt='none'):
                         if(dice!=can_list[k][3]):
                             print('錯誤')
                             break'''
-                        #print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
+                        print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
                         pointx = int(can_list[k][1])*62+120+ random.randint(25,40)
                         pointy = int(can_list[k][0])*60+480+ random.randint(25,40)
                         #print(i,j,can_list[k][1],can_list[k][1])
                         touchtime = (
                                 sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.0001)
-                        d.touch.down(
-                                x=j*62+120+ random.randint(25,40), y=i*60+470+ random.randint(25,40))  # 模拟按下        
-                        time.sleep(touchtime.real)
-                        d.touch.move(x=int((pointx+j*62+120+ random.randint(25,40))/2), y=int((pointy+i*60+470 + random.randint(25,40))/2))  # 模拟移动
-                        time.sleep(touchtime.real)
-                        d.touch.move(x=pointx, y=pointy)
-                        time.sleep(touchtime.real)
-                        d.touch.up(x=pointx, y=pointy)
+                        #move_dice(d,x1=j*62+150,y1=i*60+500,x2=pointx,y2=pointy,duringtime=touchtime.real)
+                        move_dice(d, i, j,  int(can_list[k][1]), int(can_list[k][0]), touchtime)
                         dice = placedicedector(
                                 place,d, i, j, mode=model)
                         if dice != want_to_use:
@@ -421,6 +444,39 @@ def dice(d,place, want_to_use, dicelists,model,delt='none'):
                             else:
                                 break    
     return moving
+import random
+
+def move_dice(d, i, j, pointx, pointy, touchtime):
+    # 模擬按下骰子
+    x0 = j * 62 + 120 + random.randint(25, 40)
+    y0 = i * 60 + 470 + random.randint(25, 40)
+    d.touch.down(x=x0, y=y0)
+    x1 = int(pointx) * 62 + 120 + 30
+    y1 = int(pointy) * 60 + 480 + 30
+    #計算最短距離並移動
+
+    d.touch.move(x=(x1+x0)//2, y=(y1+y0)//2)
+    time.sleep(touchtime.real)
+    # 計算抛骰子的軌跡
+    # 計算弧形軌跡的控制點
+    # cx = (x0 + x1) / 2 + random.randint(-10, 10)
+    # cy = (y0 + y1) / 2 + abs(x1 - x0) / 2 + random.randint(-10, 10)
+    # for t in range(5):
+    #     if t < 1:
+    #         # 起始部分：貝茲曲線
+    #         u = t / 10
+    #     elif t < 3:
+    #         # 中間部分：貝茲曲線
+    #         u = (t - 1) / 20
+    #     else:
+    #         # 結束部分：貝茲曲線
+    #         u = (t - 3) / 10
+    #     x = int((1 - u) ** 2 * x0 + 2 * u * (1 - u) * cx + u ** 2 * x1)
+    #     y = int((1 - u) ** 2 * y0 + 2 * u * (1 - u) * cy + u ** 2 * y1)
+    #     # 模擬移動骰子
+    #     d.touch.move(x=x + random.randint(-5, 5), y=y + random.randint(-5, 5))
+    # # 模擬放開骰子
+    d.touch.up(x=x1 + random.randint(-5, 5), y=y1 + random.randint(-5, 5))
 def no_check_dice(d,place, want_to_use, dicelists,model,delt='none'):
     moving = 0
     can_list = []
@@ -448,19 +504,11 @@ def no_check_dice(d,place, want_to_use, dicelists,model,delt='none'):
                         print('錯誤')
                         break'''
                     #print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
-                    pointx = int(can_list[k][1])*62+120+30
-                    pointy = int(can_list[k][0])*60+480+30
-                    #print(i,j,can_list[k][1],can_list[k][1])
+                    pointx = int(can_list[k][1])*62+120+ random.randint(25,40)
+                    pointy = int(can_list[k][0])*60+480+ random.randint(25,40)
                     touchtime = (
                             sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.0001)
-                    d.touch.down(
-                            x=j*62+150, y=i*60+500)  # 模拟按下        
-                    time.sleep(touchtime.real)
-                    d.touch.move(x=int((pointx+j*62+150)/2), y=int((pointy+i*60+500)/2))  # 模拟移动
-                    time.sleep(touchtime.real)
-                    d.touch.move(x=pointx, y=pointy)
-                    time.sleep(touchtime.real)
-                    d.touch.up(x=pointx, y=pointy)
+                    move_dice(d, i, j,  int(can_list[k][1]), int(can_list[k][0]), touchtime)
                     #dice = placedicedector(
                     #        place,d, i, j, mode=model)
                     #if dice != want_to_use:
@@ -483,14 +531,7 @@ def no_check_dice(d,place, want_to_use, dicelists,model,delt='none'):
                     else:
                         break    
     return moving
-def move_dice(d,x1,y1,x2,y2,duringtime=0.1):
-    d.touch.down( x=j*62+150, y=i*60+510)  # 模拟按下
-    # down 和 move 之间的延迟，自己控制
-    time.sleep(duringtime.real)
-    d.touch.move(x=pointx//2, y=pointy//2)  # 模拟移动
-    time.sleep(duringtime.real)
-    d.touch.move(x=pointx, y=pointy)  # 模拟移动
-    d.touch.up(x=pointx, y=pointy)
+dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
 def attack_dice(d,place,model):
     #待改
     for i in range(0, 3):
@@ -506,27 +547,30 @@ def attack_dice(d,place,model):
                 # 目標
                 for times in range(0, lenth):
                     pointx = int(
-                        listOfIndices[times][1]) * 60 + 120 + 30
+                        listOfIndices[times][1]) *62+120+30
                     pointy = int(
-                        listOfIndices[times][0]) * 60 + 480 + 30
-                    #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
+                        listOfIndices[times][0]) *60+480+30
+                    
+                    print(str(j*62+150)+" "+str(i*60+510)+'to->'+str(pointx)+" "+str(pointy))
                     dice = placedicedector(
                         place,d, i, j, mode=model)
                     if dice != 2:
-                        #print('確認複製成功')
+                        print('確認複製成功')
                         break
                     else:
                         touchtime = (
-                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.0001)
+                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.01)
+                        move_dice(d, i, j,  listOfIndices[times][1],  listOfIndices[times][0], touchtime)
                         # print(touchtime)
-                        d.touch.down(
-                            x=j*62+150, y=i*60+510)  # 模拟按下
+                        # d.touch.down(
+                        #     x=j*62+150, y=i*60+510)  # 模拟按下
                         # down 和 move 之间的延迟，自己控制
-                        time.sleep(touchtime.real)
-                        d.touch.move(x=pointx, y=pointy)  # 模拟移动
-                        time.sleep(touchtime.real)
-                        d.touch.up(x=pointx, y=pointy)
-                        time.sleep(1)
+
+                        # time.sleep(touchtime.real)
+                        # d.touch.move(x=pointx, y=pointy)  # 模拟移动
+                        # time.sleep(touchtime.real)
+                        # d.touch.up(x=pointx, y=pointy)
+                        # time.sleep(1)
                         #d.swipe_points(
                         #    [(j * 60 + 150, i * 60 + 550), (pointx, pointy)], touchtime.real)
                         #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
@@ -559,14 +603,15 @@ def attack_dice(d,place,model):
                     else:
                         touchtime = (
                             sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 550 - pointy, 2)) * 0.0001)
+                        move_dice(d, i, j, pointx, pointy, touchtime)
                         # print(touchtime)
-                        d.touch.down(
-                            x=j*62+150, y=i*60+500)  # 模拟按下
-                        # down 和 move 之间的延迟，自己控制
-                        time.sleep(touchtime.real)
-                        d.touch.move(x=pointx, y=pointy)  # 模拟移动
-                        time.sleep(touchtime.real)
-                        d.touch.up(x=pointx, y=pointy)
+                        # d.touch.down(
+                        #     x=j*62+150, y=i*60+500)  # 模拟按下
+                        # # down 和 move 之间的延迟，自己控制
+                        # time.sleep(touchtime.real)
+                        # d.touch.move(x=pointx, y=pointy)  # 模拟移动
+                        # time.sleep(touchtime.real)
+                        # d.touch.up(x=pointx, y=pointy)
                         time.sleep(0.5)
                         #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
                     time.sleep(0.5)
@@ -596,13 +641,13 @@ def attack(d,model,q):
         if (dices_num >= 0):
             dice_number(d,'attack',place)
         #dices_num = len([b for a in place for b in a if b[0]>=0])
-        '''print(dices_num)
+        print(dices_num)
         print('骰子種類')
         for i in range(0, 3):
             for j in range(0, 5):
                 print(place[i,j,1],end="")
             print()
-        print('骰子點數')
+        '''print('骰子點數')
         for i in range(0, 3):
             for j in range(0, 5):
                 print(place[i,j,0],end="")
@@ -621,7 +666,8 @@ def attack(d,model,q):
                 moving+=dice(d,place, 2, [2],model)
         placedicedector(place,d=d, mode=model)
         dice_number(d,'attack',place)        
-        if(moving==0 and ((np.sum(place[:, :, 1]==0)+np.sum(place[:, :, 1]==4)==0))and dices_num >= 13) :              
+        if(moving==0 and ((np.sum(place[:, :, 1]==0)+np.sum(place[:, :, 1]==4)==0))and dices_num >= 13) : 
+            print('偵錯')             
             attack_dice(d,place,model)  
         yinyun_num = np.sum(place[:, :,1] == 1)
         if (yinyun_num == 15):
@@ -632,7 +678,6 @@ def attack(d,model,q):
         i=end_game(d)
         if(i==1):
             return 0
-
 def sup(d,reconciliation,model):
     column, row, height = 3, 5, 2
     place = np.empty((column, row, height))
@@ -656,6 +701,8 @@ def sup(d,reconciliation,model):
         dice_number(d,'sup',place)
         moving += dice(d,place, 3, [3],model)
         placedicedector(place,d=d, mode=model)
+        moving += dice(d,place, 1, [2],model,'del')
+        placedicedector(place,d=d, mode=model)
         dice_number(d,'sup',place)
         moving += dice(d,place, 2, [0, 2],model)
         placedicedector(place,d=d, mode=model)
@@ -664,7 +711,10 @@ def sup(d,reconciliation,model):
         if (moving == 0):
             moving += dice(d,place, 1, [3],model)
             if (moving == 0):
-                dice(d,place, 0, [0],model)
+                #place要是滿的才能用
+                location = len(place[place >= 0])
+                if location == 15:  # 檢查 place 中元素的數量是否為 15
+                    dice(d,place, 0, [0],model)
         print('moving'+str(moving))
         place = np.full((column, row, height), -1)
         i=end_game(d)
@@ -730,61 +780,53 @@ def bubble_sup(d,reconciliation,model):
         i=end_game(d)
         if(i==1):
             break
-def update(d):
-    while(1):
-        if d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[2]/android.view.View[3]').wait():
-            break
-    d.xpath('//androidx.compose.ui.platform.ComposeView/android.view.View[1]/android.view.View[2]/android.view.View[3]').click()
-    while(1):
-        if d(text="開始玩").wait(timeout=20):
-            d.app_stop('com.android.vending')
-            d.app_start("com.percent.royaldice", use_monkey=True)
-            break    
-def open_the_game(d):
-    currentApp = d.app_list_running()
-    test=0
-    for i in currentApp:
-        #print(i)
-        if i == 'com.percent.royaldice':
-            test=1
-            break
-    if(test==0):
-        d.app_start("com.percent.royaldice", use_monkey=True)
-    start_time=time.time()
-    while(1):
-        try:
-            now=time.time()
-            if(now-start_time>180):
-                start_time=time.time()
-                d.app_stop('com.percent.royaldice')
-                time.sleep(1)
-                d.app_start("com.percent.royaldice", use_monkey=True)
-            image=d.screenshot(format='opencv')
-            result = reader.readtext(image)
-            print(result)
-            if(result!=[]):
-                if(result[0][1]=='通知' and result[1][1]=='應用程式版本不同'):
-                    print('版本更新')
-                    d.click(380, 592)
-                    update(d)
-                if('商店' in str(result) and '娛柴' in str(result)):
-                    print('進入主頁')
-                    break
-                if('公告'in str(result)):
-                    d.click(480, 95)
-                    time.sleep(1)
-        except:
-            pass
+# old version of dice will be delete
+# def open_the_game(d):
+#     currentApp = d.app_list_running()
+#     test=0
+#     for i in currentApp:
+#         #print(i)
+#         if i == 'com.percent.royaldice':
+#             test=1
+#             break
+#     if(test==0):
+#         d.app_start("com.percent.royaldice", use_monkey=True)
+#     start_time=time.time()
+#     while(1):
+#         try:
+#             now=time.time()
+#             if(now-start_time>180):
+#                 start_time=time.time()
+#                 d.app_stop('com.percent.royaldice')
+#                 time.sleep(1)
+#                 d.app_start("com.percent.royaldice", use_monkey=True)
+#             image=d.screenshot(format='opencv')
+#             result = reader.readtext(image)
+#             print(result)
+#             if(result!=[]):
+#                 if(result[0][1]=='通知' and result[1][1]=='應用程式版本不同'):
+#                     print('版本更新')
+#                     d.click(380, 592)
+#                     update(d)
+#                 if('商店' in str(result) and '娛柴' in str(result)):
+#                     print('進入主頁')
+#                     break
+#                 if('公告'in str(result)):
+#                     d.click(480, 95)
+#                     time.sleep(1)
+#         except:
+#             pass
 def dicer_att(adb_devices,q):
+
     attctrl=ctrl_game(adb_devices,reader,q) 
     while(attctrl.check_ingame()):pass
     d = attctrl.d
-    count=1
+    global count
+    attctrl.opengame()
     if (count==1):
         shop=Store_Refresh.Shop(d,reader=reader)
         if(shop.buy_and_fresh()):
             threading.Thread(target=reset).start()
-    attctrl.opengame()
     attctrl.open_room()
     roomnum=attctrl.room_num()
     print(roomnum)
@@ -805,8 +847,8 @@ def dicer_sup(adb_devices,q):
     d =supctrl.d
     supctrl.opengame()
     supctrl.open_room()
-    while(queue.empty()):pass
-    roomnum=queue.get()
+    while(q.empty()):pass
+    roomnum=q.get()
     supctrl.input_the_room_num(roomnum)
     while(not supctrl.check_ingame()):pass
     while(q.empty()):
@@ -833,19 +875,18 @@ supmodel = torch.hub.load('ultralytics/yolov5',
     'custom', path=r'D:\dice_py\yinyun_auto_play\best_sup.pt')
 attackmodel = torch.hub.load(
         'ultralytics/yolov5', 'custom', path=r'D:\dice_py\yinyun_auto_play\best(2).pt')
-attackmodel.conf = 0.6
+attackmodel.conf = 0.5
 supmodel.conf = 0.6
-import watchAd
-import Store_Refresh
+
 def reset():
     global count
     count=0
     time.sleep(21500)
     count=1
 global count
+count=1
 if __name__ == '__main__':
     os.system("adb devices")
-    
     for i in range(30):
         try:
             f = open('D:\record.txt', "a+")
@@ -859,15 +900,13 @@ if __name__ == '__main__':
             result = time.strftime("%Y-%m-%d %I:%M:%S %p", localtime)
             f.write(result+'\n')
             f.close()
-
         queue = Queue(3)
-        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5556',queue) )
+        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5560',queue) )
         tatt = threading.Thread( target=dicer_att, args=( 'emulator-5558',queue) )
         tatt.start()
         tsup.start()
         tatt.join()
         tsup.join()
-        
 
 
     
