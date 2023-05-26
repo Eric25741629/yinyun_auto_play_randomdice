@@ -823,10 +823,10 @@ def dicer_att(adb_devices,q):
     d = attctrl.d
     global count
     attctrl.opengame()
-    if (count==1):
-        shop=Store_Refresh.Shop(d,reader=reader)
-        if(shop.buy_and_fresh()):
-            threading.Thread(target=reset).start()
+    # if (count==1):
+    #     shop=Store_Refresh.Shop(d,reader=reader)
+    #     if(shop.buy_and_fresh()):
+    #         threading.Thread(target=reset).start()
     attctrl.open_room()
     roomnum=attctrl.room_num()
     print(roomnum)

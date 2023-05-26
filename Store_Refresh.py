@@ -1,18 +1,28 @@
 import cv2
 import numpy as np
 import time
+import watchAd
 class Shop():
     def __init__(self,d,reader):
         self.d=d
         self.reader=reader
-
+        self.ad=watchAd.watchAD(d)
     def gotoshop(self):
         self.d.click(65,904)
         time.sleep(1)
-        self.d.swipe(0.5,0.2,0.5,0.4)
+        self.d.touch.down(257,141)
+        a=[i for i in range(141,741,100)]
+        for i in a:
+            self.d.touch.move(257,i)
+        self.d.touch.up(257,741)
         time.sleep(2)
-        self.d.swipe(0.5,0.4,0.5,0.2)
-        time.sleep(2)
+        a=[i for i in range(841,560,-18)]
+        self.d.touch.down(257,741)
+        for i in a:
+            self.d.touch.move(257,i)
+        time.sleep(1)
+        self.d.touch.up(257,441)
+
     def if_legend(self):
         #img=cv2.imread(r'C:\Users\eric\Documents\XuanZhi9\Pictures\Screenshots\Screenshot_20230520-232514.png')
         img=self.d.screenshot(format='opencv')
@@ -61,19 +71,10 @@ class Shop():
             self.d.click(267,588)
 
     def watchvideo(self):
-        time.sleep(5)
-        start=time.time()
-        while(time.time()-start<40):
-            #print(d.info['currentPackageName'])
-            currentApp = self.d.app_list_running()
-            for i in currentApp:
-                # print(i)
-                if i=='com.android.vending':
-                    self.d.app_stop(i)
-            if(self.d(resourceId="com.android.vending:id/0_resource_name_obfuscated", description="Close").exists):        
-                self.d(resourceId="com.android.vending:id/0_resource_name_obfuscated", description="Close").click()        
-            if(self.checkinshop()):
-                return 1
+        self.ad.watchvideo()
+        time.sleep(2)
+        if(self.checkinshop()):
+            return 1
         return 0
 
     def checkinshop(self):
@@ -84,7 +85,7 @@ class Shop():
             if ('商店'== i or'背包'== i or '娛樂'== i or '社交'== i):
                 count+=1
         if(count>=3):
-            print('yes')       
+            print('回到商店')       
             return 1
         return 0        
     def buy_and_fresh(self):
