@@ -13,15 +13,18 @@ class watchAD():
             currentApp = self.d.app_list_running()
             for i in currentApp:
                 if i=='com.android.ld.appstore':
-                    print('yes')
+                    #print('yes')
                     self.d.app_stop(i)
                 if i=='com.android.vending':
-                    print('yes')
+                    #print('yes')
                     self.d.app_stop(i)
                     #return 1
                 # print(i)
             if (self.d(resourceId="al_skipButton").click_exists()):
                 time.sleep(5)
+            if(self.d(resourceId="al_skipButton").exists()):
+                self.d(resourceId="al_skipButton").click()
+                print('yes')
             if(self.d(resourceId="al_closeButton").click_exists()):
                 return 1
             if(self.d(resourceId="com.android.vending:id/0_resource_name_obfuscated", description="Close").click_exists()):   
