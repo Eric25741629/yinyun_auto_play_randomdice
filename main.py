@@ -16,8 +16,13 @@ from adbutils import adb
 import Store_Refresh
 import watchAd
 from pic_tranform import *
-
-
+from model import Classifier
+attamodel = Classifier()
+attamodel.load_state_dict(torch.load("atta3.pth"))
+attamodel.eval()
+supamodel = Classifier()
+supamodel.load_state_dict(torch.load("sup6.pth"))
+supamodel.eval()
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
         self.d=u2.connect(devices_ip) # 手機的IP
@@ -242,8 +247,8 @@ class play():
         self.width, self.height = self.d.window_size()
         self.act=act
         self.model=model
-
         #一個3*5*2的矩陣
+        self.place=np.array(3,5,2)
         self.place=np.zeros((3,5,2)).fill(-1)
     def get_dice_type_and_num(self, who=None,path=None):
         time.sleep(0.2)
@@ -255,6 +260,11 @@ class play():
                 if image is not None:
                     break
         self.place.fill(-1) 
+    def printboardnum(self):
+        for i in range(0,3):
+            for j in range(0,5):
+                print(self.place[i][j][0],end=' ')
+            print()
         
 #class game
 def color(img,x,y):
@@ -321,7 +331,7 @@ def object_detection(img, model):
     return results
 
 def get_dice_value(x, y):
-    return int((x - 115) // 60), int((y - 475) // 60)
+    return int((x - 115) / 60), int((y - 475) / 60)
 
 def placedicedector(place, d, i=-1, j=-1, mode='None'):
     time.sleep(0.2)
@@ -368,25 +378,42 @@ def end_game(d):
             return 0    
     except:
         pass
+error=0
 def dice_number(d,mode,place):
+    global error
     try:
         image = get_screenshot(d)
         for i in range(0, 3):
             for j in range(0, 5):
                 pointx = j * 62 + 120
-                pointy = i * 60 + 480
-                img = image[pointy + 15:pointy +
+                pointy = i * 60 + 482
+                img1 = image[pointy + 15:pointy +
                             50, pointx + 5:pointx + 48]
-                x, y = dice_num(img,mode, int(place[i][j][1]))
+                pointx = int(j * 62.7 + 144)
+                pointy = i * 60 + 512
+                img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
+                img2 = Image.fromarray(img2)
+                if mode=='sup':
+                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),supamodel)
+                else:
+                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),attackmodel)
                 #print(x, y)
                 try:
-                    place[i][j][1] = y
-                    place[i][j][0] = x
+                    place[i][j][0] = dicenum
+                    place[i][j][1] = dicetype
                 except:
                     pass
     except:
         pass
- 
+    print("dice_number:")
+    for i in range(0, 3):
+        for j in range(0, 5):
+            if place[i][j][0] == -1:
+                print('none',end=' ')
+            else:
+                print(place[i][j][0],end=' ')
+        print()
+    print()
 def dice(d,place, want_to_use, dicelists,model,delt='none'):
     moving = 0
     can_list = []
@@ -414,12 +441,12 @@ def dice(d,place, want_to_use, dicelists,model,delt='none'):
                         if(dice!=can_list[k][3]):
                             print('錯誤')
                             break'''
-                        print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
+                        print('起點'+str(i)+" "+str(j)+'目標'+str(can_list[k]))
                         pointx = int(can_list[k][1])*62+120+ random.randint(25,40)
                         pointy = int(can_list[k][0])*60+480+ random.randint(25,40)
                         #print(i,j,can_list[k][1],can_list[k][1])
                         touchtime = (
-                                sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.0001)
+                                sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.001)
                         #move_dice(d,x1=j*62+150,y1=i*60+500,x2=pointx,y2=pointy,duringtime=touchtime.real)
                         move_dice(d, i, j,  int(can_list[k][1]), int(can_list[k][0]), touchtime)
                         dice = placedicedector(
@@ -447,36 +474,48 @@ def dice(d,place, want_to_use, dicelists,model,delt='none'):
 import random
 
 def move_dice(d, i, j, pointx, pointy, touchtime):
-    # 模擬按下骰子
-    x0 = j * 62 + 120 + random.randint(25, 40)
-    y0 = i * 60 + 470 + random.randint(25, 40)
-    d.touch.down(x=x0, y=y0)
-    x1 = int(pointx) * 62 + 120 + 30
-    y1 = int(pointy) * 60 + 480 + 30
-    #計算最短距離並移動
-
-    d.touch.move(x=(x1+x0)//2, y=(y1+y0)//2)
-    time.sleep(touchtime.real)
-    # 計算抛骰子的軌跡
-    # 計算弧形軌跡的控制點
-    # cx = (x0 + x1) / 2 + random.randint(-10, 10)
-    # cy = (y0 + y1) / 2 + abs(x1 - x0) / 2 + random.randint(-10, 10)
-    # for t in range(5):
-    #     if t < 1:
-    #         # 起始部分：貝茲曲線
-    #         u = t / 10
-    #     elif t < 3:
-    #         # 中間部分：貝茲曲線
-    #         u = (t - 1) / 20
-    #     else:
-    #         # 結束部分：貝茲曲線
-    #         u = (t - 3) / 10
-    #     x = int((1 - u) ** 2 * x0 + 2 * u * (1 - u) * cx + u ** 2 * x1)
-    #     y = int((1 - u) ** 2 * y0 + 2 * u * (1 - u) * cy + u ** 2 * y1)
-    #     # 模擬移動骰子
-    #     d.touch.move(x=x + random.randint(-5, 5), y=y + random.randint(-5, 5))
-    # # 模擬放開骰子
-    d.touch.up(x=x1 + random.randint(-5, 5), y=y1 + random.randint(-5, 5))
+    try:
+        # 模擬按下骰子
+        x0 = j * 62 + 120 + random.randint(25, 40)
+        y0 = i * 60 + 470 + random.randint(25, 40)
+        d.touch.down(x=x0, y=y0)
+        x1 = int(pointx) * 62 + 120 + 30
+        y1 = int(pointy) * 60 + 480 + 30
+        #計算最短距離並移動
+        #將距離切成四個點
+        #計算每個點的距離
+        #加上隨機值
+        for _ in range(0,4):
+            x2 = x0+(_*(x1-x0)/4)+random.randint(-5,5)
+            y2 = y0+(_*(y1-y0)/4)+random.randint(-5,5)
+            d.touch.move(x=x2, y=y2)
+            time.sleep(touchtime.real/8)
+        # time.sleep(touchtime.real/2)
+        # d.touch.move(x=(x1+x0)//2, y=(y1+y0)//2)
+        # time.sleep(touchtime.real/2)
+        d.touch.up(x=x1 + random.randint(-5, 5), y=y1 + random.randint(-5, 5))
+        # 計算抛骰子的軌跡
+        # 計算弧形軌跡的控制點
+        # cx = (x0 + x1) / 2 + random.randint(-10, 10)
+        # cy = (y0 + y1) / 2 + abs(x1 - x0) / 2 + random.randint(-10, 10)
+        # for t in range(5):
+        #     if t < 1:
+        #         # 起始部分：貝茲曲線
+        #         u = t / 10
+        #     elif t < 3:
+        #         # 中間部分：貝茲曲線
+        #         u = (t - 1) / 20
+        #     else:
+        #         # 結束部分：貝茲曲線
+        #         u = (t - 3) / 10
+        #     x = int((1 - u) ** 2 * x0 + 2 * u * (1 - u) * cx + u ** 2 * x1)
+        #     y = int((1 - u) ** 2 * y0 + 2 * u * (1 - u) * cy + u ** 2 * y1)
+        #     # 模擬移動骰子
+        #     d.touch.move(x=x + random.randint(-5, 5), y=y + random.randint(-5, 5))
+        # # 模擬放開骰子
+    except Exception as err:
+        print(err)
+        pass    
 def no_check_dice(d,place, want_to_use, dicelists,model,delt='none'):
     moving = 0
     can_list = []
@@ -683,13 +722,16 @@ def sup(d,reconciliation,model):
     place = np.empty((column, row, height))
     place = np.full((column, row, height), -1)
     while (1):
+        
         check=in_the_game(d)
+        
         if(check==0):
             break
         stage=Stage(d)
         #sct(d)
         if(stage>reconciliation):
             return 0
+        sct(d)
         call_dice(d)
         placedicedector(place,d, -1, -1, model)
         moving = 0
@@ -744,6 +786,7 @@ def bubble_sup(d,reconciliation,model):
             break
         #sct(d)
         stage=Stage(d)
+        sct(d)
         call_dice(d)
         if(stage>reconciliation):
             break
@@ -833,7 +876,17 @@ def dicer_att(adb_devices,q):
     q.put(roomnum)
     attctrl.begin_button()
     d.click(250, 700)  
-    while(not attctrl.check_ingame()):pass
+    start_time=time.time()
+    while(not attctrl.check_ingame()):
+        print(time.time()-start_time)
+        if (time.time()-start_time>120):
+            # attctrl.begin_button()
+            # start_time=time.time()
+            #結束此執行序
+            q.put(-10)
+            d.app_stop('com.percent.royaldice')
+            return 
+        time.sleep(1)
     check=attack(d,attackmodel,q)
     if(check!=0):
         level_up(d,[0])
@@ -850,9 +903,24 @@ def dicer_sup(adb_devices,q):
     while(q.empty()):pass
     roomnum=q.get()
     supctrl.input_the_room_num(roomnum)
-    while(not supctrl.check_ingame()):pass
+    start_time=time.time()
+    while(not supctrl.check_ingame()):
+        # while(not attctrl.check_ingame()):
+        print(time.time()-start_time)
+        if (time.time()-start_time>120):
+            d.app_stop('com.percent.royaldice')
+            break
+        time.sleep(1)
+    if q.empty():pass    
+    else:
+        if(q.get()==-10):
+            d.app_stop('com.percent.royaldice')
+            return
     while(q.empty()):
+        sct(d)
         call_dice(d)
+        
+        time.sleep(1)
     time.sleep(3)
     check=sup(d,52,supmodel)
     if(check==0):
@@ -866,7 +934,10 @@ def sct(d):
     # while(1):
     global image_num
     image = d.screenshot(format='opencv')
-    cv2.imwrite(str(image_num)+'.jpg',image)
+    #如果圖片存在的話，image_num就會一直加1 直到圖片不存在
+    while(os.path.isfile(r"D:\dice_py\123/{}.jpg".format(image_num))):
+        image_num+=1
+    cv2.imwrite(r"D:\dice_py\123/{}.jpg".format(image_num),image)
     #time.sleep(1)
     image_num+=1
       

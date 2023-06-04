@@ -1,7 +1,15 @@
 import cv2
 import numpy as np
-
+from PIL import Image
+from model import Classifier
+import torch
+import torchvision.transforms as transforms
+import time
 import cv2
+import numpy as np
+import os
+
+
 dicenames = ['mimic',
              'jocker',
              'assassin',
@@ -152,11 +160,78 @@ dicenames = ['mimic',
                  'summon',
                  'bubble'
                  ]
-       
-def dice_num(img,mode, type=-1):
+def predict_single_image(img, model):
+    # 轉換圖片
+    transform = transforms.Compose([
+        transforms.Resize((61, 62)),
+        transforms.ToTensor(),
+    ])
+    image = transform(img).unsqueeze(0)
+    
+    # 預測
+    with torch.no_grad():
+        name, num = model(image)
+        _, predictedname = torch.max(name, 1)
+        _, predictednum = torch.max(num, 1)
+        
+        if torch.max(torch.nn.functional.softmax(num, dim=1)) < 0.8:
+            return -1, -1
+        
+        return predictedname, predictednum
+
+def dice_num(img,img2,mode,error, dicetype=-1, model=None):
+    
+    if model!=None:
+        try:
+            predictedname,predictednum=predict_single_image(img2,model)
+            # print("dicenum from mobilenet",dice,"predictpercent",predictpercent)
+            # if mode == 'sup':
+            if predictedname!=-1:
+                # if predictpercent<0.8:
+                # print("dicenum from mobilenet",predictednum,"type",predictedname)
+                if (predictedname==5):
+                    return -1 , -1 , error
+                return predictednum,predictedname,error
+        except Exception as e:
+            print(e)
+                # if (dice//7==5):
+                #     if dicetype!=2:
+                #         error+=1
+                #         return dice%7+1,dicetype,error
+                    # return dice%7+1,2,error
+        #         if (dice//7==6):
+        #             if dicetype!=0:
+        #                 error+=1
+        #                 return dice%7+1,dicetype,error
+        #             return dice%7+1,0,error
+        #         elif (dice//7==3):
+        #             if dicetype!=1:
+        #                 error+=1
+        #                 return dice%7+1,dicetype,error
+        #             return dice%7+1,1,error
+        #         elif (dice//7==7):
+        #             if dicetype!=3:
+        #                 error+=1
+        #                 return dice%7+1,dicetype,error
+        #             return dice%7+1,3,error
+        #         elif (dice//7==8):
+        #             if dicetype!=4:
+        #                 error+=1
+        #                 return dice%7+1,dicetype,error
+        #             return dice%7+1,4,error
+        #         else:
+        #             return -1 ,-1,error
+        # else:
+        #     if dice!=-1:
+        #         if predictpercent<0.9:
+        #             print("dicenum from mobilenet",dice,"type",dicetype)
+        #             return dice%7+1,dicetype,error
+                # else:
+                #     return dice%7+1,dice//7
+
     if(mode=='sup'):
         try:
-            if (type == 0 or type == 1 ):
+            if (dicetype == 0 or dicetype == 1 ):
                 #print('jocker')
                 count = jocker_num(img)
             else :
@@ -169,15 +244,15 @@ def dice_num(img,mode, type=-1):
                 #else:
                 #    count = count_HoughCircles
             #print(count)
-            return count, type
+            return count, dicetype,error
         except Exception as err:
             print(err)
-            return -1, type
+            return -1, dicetype,error
     else:
         try:
-            if (type == 2):
+            if (dicetype == 2):
                 count = jocker_num(img)
-            elif(type==1):
+            elif(dicetype==1):
                 count = yinyun_num(img)
             else :
                 count = Area_Count_dice_num(img)
@@ -187,10 +262,10 @@ def dice_num(img,mode, type=-1):
                 #else:
                 #    count = count_HoughCircles
             #print(count)
-            return count, type
+            return count, dicetype,error
         except Exception as err:
             print(err)
-            return -1, type
+            return -1, dicetype,error
 
 def morphology_operations(img):
     morph_operator = 2
@@ -209,8 +284,11 @@ if __name__ == '__main__':
     for i in range(0, 3):
         for j in range(0, 5):
             pointx = j * 62 + 120
-            pointy = int(i * 61 )+ 482
-            img = cv2.imread(pic)[pointy + 13:pointy + 49, pointx + 5:pointx + 48]
+            pointy = int(i * 61 )+ 482 
+            pointx = j * 62 + 120
+            pointy = i * 60 + 482
+
+            img = cv2.imread(pic)[pointy + 15:pointy + 50, pointx + 5:pointx + 48]
             morphology_operations(img)
             #dice_num(img,'sup',0)
             #print(dice_num(img,'sup',3), end='  ')
