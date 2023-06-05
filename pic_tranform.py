@@ -173,8 +173,10 @@ def predict_single_image(img, model):
     # 預測
     with torch.no_grad():
         name, num = model(image)
-        predictedname = torch.max(name, 1)[1].to("cpu")
-        predictednum = torch.max(num, 1)[1].to("cpu")
+        predictedname = torch.max(name.clone().detach(), 1)[1]
+        predictednum = torch.max(num.clone().detach(), 1)[1]
+        # predictedname = torch.max(name, 1)[1].to("cpu")
+        # predictednum = torch.max(num, 1)[1].to("cpu")
         
         if torch.max(torch.nn.functional.softmax(num, dim=1)) < 0.8:
             return -1, -1
