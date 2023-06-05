@@ -483,16 +483,17 @@ def move_dice(d, i, j, pointx, pointy, touchtime):
         d.touch.down(x=x0, y=y0)
         x1 = int(pointx) * 62 + 120 + 30
         y1 = int(pointy) * 60 + 480 + 30
+        # 403 559 21354 30510
         print(x0, y0, x1, y1)
         #計算最短距離並移動
         #將距離切成四個點
         #計算每個點的距離
         #加上隨機值
-        for _ in range(0,4):
-            x2 = x0+(_*(x1-x0)/4)+random.randint(-5,5)
-            y2 = y0+(_*(y1-y0)/4)+random.randint(-5,5)
+        for _ in range(0,6):
+            x2 = x0+(_*(x1-x0)/6)+random.randint(-5,5)
+            y2 = y0+(_*(y1-y0)/6)+random.randint(-5,5)
             d.touch.move(x=x2, y=y2)
-            time.sleep(touchtime.real/8)
+            # time.sleep(touchtime.real/8)
         # time.sleep(touchtime.real/2)
         # d.touch.move(x=(x1+x0)//2, y=(y1+y0)//2)
         # time.sleep(touchtime.real/2)
@@ -601,6 +602,7 @@ def attack_dice(d,place,model):
                     else:
                         touchtime = (
                             sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.001)
+                        print(listOfIndices[times][1], listOfIndices[times][0])
                         move_dice(d, i, j,  listOfIndices[times][1],  listOfIndices[times][0], touchtime)
                         # print(touchtime)
                         # d.touch.down(
@@ -636,6 +638,7 @@ def attack_dice(d,place,model):
                     pointy = int(
                         listOfIndices[times][0]) * 62 + 470 + random.randint(25,40)
                     #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
+                    print(listOfIndices[times][1], listOfIndices[times][0])
                     dice = placedicedector(
                         place,d, i, j, mode=model)
                     if dice != 3:
@@ -644,7 +647,7 @@ def attack_dice(d,place,model):
                     else:
                         touchtime = (
                             sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 550 - pointy, 2)) * 0.0001)
-                        move_dice(d, i, j, pointx, pointy, touchtime)
+                        move_dice(d, i, j,  listOfIndices[times][1], listOfIndices[times][0], touchtime)
                         # print(touchtime)
                         # d.touch.down(
                         #     x=j*62+150, y=i*60+500)  # 模拟按下
@@ -734,8 +737,10 @@ def sup(d,reconciliation,model):
         #sct(d)
         if(stage>reconciliation):
             return 0
-        sct(d)
-        call_dice(d)
+        #sct(d)
+        if check>=20 and check<=25:pass #修改邏輯 不被獅子吼 所以不叫骰子 
+        else:
+            call_dice(d)
         placedicedector(place,d, -1, -1, model)
         moving = 0
         location = len(place[place >= 0])
@@ -789,7 +794,7 @@ def bubble_sup(d,reconciliation,model):
             break
         #sct(d)
         stage=Stage(d)
-        sct(d)
+        #sct(d)
         call_dice(d)
         if(stage>reconciliation):
             break
@@ -834,10 +839,10 @@ def dicer_att(adb_devices,q):
     d = attctrl.d
     global count
     attctrl.opengame()
-    # if (count==1):
-    #     shop=Store_Refresh.Shop(d,reader=reader)
-    #     if(shop.buy_and_fresh()):
-    #         threading.Thread(target=reset).start()
+    if (count==1):
+        shop=Store_Refresh.Shop(d,reader=reader)
+        if(shop.buy_and_fresh()):
+            threading.Thread(target=reset).start()
     attctrl.open_room()
     roomnum=attctrl.room_num()
     print(roomnum)
@@ -885,12 +890,12 @@ def dicer_sup(adb_devices,q):
             d.app_stop('com.percent.royaldice')
             return
     while(q.empty()):
-        sct(d)
+        #sct(d)
         call_dice(d)
         
         time.sleep(1)
     time.sleep(3)
-    check=sup(d,52,supmodel)
+    check=sup(d,60,supmodel)
     if(check==0):
         level_up(d,[4])
         bubble_sup(d,1000,supmodel)
@@ -946,7 +951,3 @@ if __name__ == '__main__':
         tsup.start()
         tatt.join()
         tsup.join()
-
-
-    
-   
