@@ -1,14 +1,13 @@
+import os
+import time
+
 import cv2
 import numpy as np
-from PIL import Image
-from model import Classifier
 import torch
 import torchvision.transforms as transforms
-import time
-import cv2
-import numpy as np
-import os
+from PIL import Image
 
+from model import Classifier
 
 dicenames = ['mimic',
              'jocker',
@@ -160,24 +159,29 @@ dicenames = ['mimic',
                  'summon',
                  'bubble'
                  ]
+
 def predict_single_image(img, model):
+    device = torch.device("cpu")  # 使用CPU設備
+    
     # 轉換圖片
     transform = transforms.Compose([
         transforms.Resize((61, 62)),
         transforms.ToTensor(),
     ])
-    image = transform(img).unsqueeze(0)
+    image = transform(img).unsqueeze(0).to(device)
     
     # 預測
     with torch.no_grad():
         name, num = model(image)
-        _, predictedname = torch.max(name, 1)
-        _, predictednum = torch.max(num, 1)
+        predictedname = torch.max(name, 1)[1].to("cpu")
+        predictednum = torch.max(num, 1)[1].to("cpu")
         
         if torch.max(torch.nn.functional.softmax(num, dim=1)) < 0.8:
             return -1, -1
         
-        return predictedname, predictednum
+        return predictedname.item(), predictednum.item()
+
+
 
 def dice_num(img,img2,mode,error, dicetype=-1, model=None):
     
@@ -193,7 +197,8 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
                     return -1 , -1 , error
                 return predictednum,predictedname,error
         except Exception as e:
-            print(e)
+            pass
+            # print(e)
                 # if (dice//7==5):
                 #     if dicetype!=2:
                 #         error+=1
