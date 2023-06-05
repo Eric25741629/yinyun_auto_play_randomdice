@@ -23,6 +23,7 @@ attamodel.eval()
 supamodel = Classifier()
 supamodel.load_state_dict(torch.load("sup6.pth"))
 supamodel.eval()
+#遊玩前置作業
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
         self.d=u2.connect(devices_ip) # 手機的IP
@@ -387,7 +388,7 @@ def dice_number(d,mode,place):
             for j in range(0, 5):
                 pointx = j * 62 + 120
                 pointy = i * 60 + 482
-                img1 = image[pointy + 15:pointy +
+                img1 = image[pointy + 15:pointy +           
                             50, pointx + 5:pointx + 48]
                 pointx = int(j * 62.7 + 144)
                 pointy = i * 60 + 512
@@ -409,9 +410,9 @@ def dice_number(d,mode,place):
     for i in range(0, 3):
         for j in range(0, 5):
             if place[i][j][0] == -1:
-                print('none',end=' ')
+                print("{:>5}".format('none'), end=' ')
             else:
-                print(place[i][j][0],end=' ')
+                print("{:>5}".format(place[i][j][0]), end=' ')
         print()
     print()
 def dice(d,place, want_to_use, dicelists,model,delt='none'):
@@ -478,9 +479,11 @@ def move_dice(d, i, j, pointx, pointy, touchtime):
         # 模擬按下骰子
         x0 = j * 62 + 120 + random.randint(25, 40)
         y0 = i * 60 + 470 + random.randint(25, 40)
+        
         d.touch.down(x=x0, y=y0)
         x1 = int(pointx) * 62 + 120 + 30
         y1 = int(pointy) * 60 + 480 + 30
+        print(x0, y0, x1, y1)
         #計算最短距離並移動
         #將距離切成四個點
         #計算每個點的距離
@@ -586,19 +589,18 @@ def attack_dice(d,place,model):
                 # 目標
                 for times in range(0, lenth):
                     pointx = int(
-                        listOfIndices[times][1]) *62+120+30
+                        listOfIndices[times][1]) *62+150
                     pointy = int(
-                        listOfIndices[times][0]) *60+480+30
+                        listOfIndices[times][0]) *60+510
                     
                     print(str(j*62+150)+" "+str(i*60+510)+'to->'+str(pointx)+" "+str(pointy))
-                    dice = placedicedector(
-                        place,d, i, j, mode=model)
+                    dice = placedicedector( place,d, i, j, mode=model)
                     if dice != 2:
                         print('確認複製成功')
                         break
                     else:
                         touchtime = (
-                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.01)
+                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.001)
                         move_dice(d, i, j,  listOfIndices[times][1],  listOfIndices[times][0], touchtime)
                         # print(touchtime)
                         # d.touch.down(
@@ -684,7 +686,8 @@ def attack(d,model,q):
         print('骰子種類')
         for i in range(0, 3):
             for j in range(0, 5):
-                print(place[i,j,1],end="")
+                # 空2格對齊
+                print("{:2d} ".format(place[i,j,1]), end="")
             print()
         '''print('骰子點數')
         for i in range(0, 3):
@@ -823,42 +826,7 @@ def bubble_sup(d,reconciliation,model):
         i=end_game(d)
         if(i==1):
             break
-# old version of dice will be delete
-# def open_the_game(d):
-#     currentApp = d.app_list_running()
-#     test=0
-#     for i in currentApp:
-#         #print(i)
-#         if i == 'com.percent.royaldice':
-#             test=1
-#             break
-#     if(test==0):
-#         d.app_start("com.percent.royaldice", use_monkey=True)
-#     start_time=time.time()
-#     while(1):
-#         try:
-#             now=time.time()
-#             if(now-start_time>180):
-#                 start_time=time.time()
-#                 d.app_stop('com.percent.royaldice')
-#                 time.sleep(1)
-#                 d.app_start("com.percent.royaldice", use_monkey=True)
-#             image=d.screenshot(format='opencv')
-#             result = reader.readtext(image)
-#             print(result)
-#             if(result!=[]):
-#                 if(result[0][1]=='通知' and result[1][1]=='應用程式版本不同'):
-#                     print('版本更新')
-#                     d.click(380, 592)
-#                     update(d)
-#                 if('商店' in str(result) and '娛柴' in str(result)):
-#                     print('進入主頁')
-#                     break
-#                 if('公告'in str(result)):
-#                     d.click(480, 95)
-#                     time.sleep(1)
-#         except:
-#             pass
+
 def dicer_att(adb_devices,q):
 
     attctrl=ctrl_game(adb_devices,reader,q) 
