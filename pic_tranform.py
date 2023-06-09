@@ -153,35 +153,34 @@ def mimic_num(img):
 # dector_summon_or_bubble(img)
 
 # yinyun_num(img)
-dicenames = ['mimic',
+dicenames2 = ['mimic',
                  'jocker',
                  'assassin',
                  'summon',
                  'bubble'
                  ]
+dicenames1 = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
+label_name = ['assassin1', 'assassin2', 'assassin3', 'assassin4', 'assassin5', 'assassin6', 'assassin7', 'background', 'broken_growning1', 'broken_growning2', 
+'broken_growning3', 'broken_growning4', 'broken_growning5', 'broken_growning6', 'broken_growning7', 'bubble1', 'bubble2', 'bubble3', 'bubble4', 'bubble5', 'bubble6', 'bubble7', 'growning1', 'growning2', 'growning3', 'growning4', 'growning5', 'growning6', 'growning7', 'jocker1', 'jocker2', 'jocker3', 'jocker4', 'jocker5', 'jocker6', 'jocker7', 'mimic1', 'mimic2', 'mimic3', 'mimic4', 'mimic5', 'mimic6', 'mimic7', 'summon1', 'summon2', 'summon3', 'summon4', 'summon5', 'summon6', 'summon7', 'sup1', 'sup2', 'sup3', 'sup4', 'sup5', 'sup6', 'sup7', 'yinyun1', 'yinyun2', 'yinyun3', 'yinyun4', 'yinyun5', 'yinyun6', 'yinyun7']
 
-def predict_single_image(img, model):
-    device = torch.device("cpu")  # 使用CPU設備
-    
-    # 轉換圖片
+def predict_single_image(img,model):
     transform = transforms.Compose([
-        transforms.Resize((61, 62)),
+        transforms.Resize((64, 64)),
         transforms.ToTensor(),
+        transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ])
-    image = transform(img).unsqueeze(0).to(device)
     
-    # 預測
+    img = transform(img)
+    img = img.unsqueeze(0)
+    
     with torch.no_grad():
-        name, num = model(image)
-        predictedname = torch.max(name.clone().detach(), 1)[1]
-        predictednum = torch.max(num.clone().detach(), 1)[1]
-        # predictedname = torch.max(name, 1)[1].to("cpu")
-        # predictednum = torch.max(num, 1)[1].to("cpu")
-        
-        if torch.max(torch.nn.functional.softmax(num, dim=1)) < 0.8:
-            return -1, -1
-        
-        return predictedname.item(), predictednum.item()
+        num = model(img)
+        _, predicted_index = torch.max(num, 1)
+        #如果準確率大於0.9，就返回預測結果，否則返回-1
+        if torch.max(num)>0.99:
+            return predicted_index.item()
+        else:
+            return -1
 
 
 
@@ -189,18 +188,32 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
     
     if model!=None:
         try:
-            predictedname,predictednum=predict_single_image(img2,model)
+            predictedtype_num=predict_single_image(img2,model)
             # print("dicenum from mobilenet",dice,"predictpercent",predictpercent)
             # if mode == 'sup':
-            if predictedname!=-1:
+            if predictedtype_num!=-1:
                 # if predictpercent<0.8:
                 # print("dicenum from mobilenet",predictednum,"type",predictedname)
-                if (predictedname==5):
+                if (predictedtype_num==7):
+                    image_num=10000
+                    while(os.path.isfile(r"D:\dice_py\123/{}.jpg".format(image_num))):
+                        image_num+=1
+                    #cv2.imwrite(r"D:\dice_py\123/{}.jpg".format(image_num),img)
+                    # 保存pil圖片
+                    pil_img = Image.fromarray(img)
+                    pil_img.save(r"D:\dice_py\123/{}.jpg".format(image_num))
                     return -1 , -1 , error
+                if mode=='sup':
+                    
+
+                    return int(label_name[predictedtype_num][-1]),dicenames2.index(label_name[predictedtype_num][:-1]),error
+                else:
+                    return int(label_name[predictedtype_num][-1]),dicenames1.index(label_name[predictedtype_num][:-1]),error
                 return predictednum,predictedname,error
         except Exception as e:
-            pass
-            # print(e)
+            
+            # pass
+            print(e)
                 # if (dice//7==5):
                 #     if dicetype!=2:
                 #         error+=1
