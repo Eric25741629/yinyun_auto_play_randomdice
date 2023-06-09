@@ -17,12 +17,14 @@ import Store_Refresh
 import watchAd
 from pic_tranform import *
 from model import Classifier
-attamodel = Classifier()
-attamodel.load_state_dict(torch.load("atta3.pth"))
-attamodel.eval()
-supamodel = Classifier()
-supamodel.load_state_dict(torch.load("sup6.pth"))
-supamodel.eval()
+from model import models
+from torch import nn
+
+dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
+num_classes = 64
+dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
+dicetype_num_model.load_state_dict(torch.load(r'C:\dice_test\V3model8.pth'))
+dicetype_num_model.eval()
 #遊玩前置作業
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
@@ -253,7 +255,7 @@ class play():
         self.place=np.zeros((3,5,2)).fill(-1)
     def get_dice_type_and_num(self, who=None,path=None):
         time.sleep(0.2)
-        if who == 'test':
+        if who == 'test' and path is not None:
             image=cv2.imread(path)
         else:
             while(1):
@@ -395,9 +397,9 @@ def dice_number(d,mode,place):
                 img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
                 img2 = Image.fromarray(img2)
                 if mode=='sup':
-                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),supamodel)
+                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
                 else:
-                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),attackmodel)
+                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
                 #print(x, y)
                 try:
                     place[i][j][0] = dicenum
@@ -747,17 +749,20 @@ def sup(d,reconciliation,model):
         if (location >= 8):
             dice_number(d,'sup',place)
         moving += dice(d,place, 1, [2],model,'del')
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 3, [3],model)
-        placedicedector(place,d=d, mode=model)
-        moving += dice(d,place, 1, [2],model,'del')
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 2, [0, 2],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 3, [3, 0],model)
+        place = np.full((column, row, height), -1)
+        for _ in range(4):
+            placedicedector(place, d=d, mode=model)
+            dice_number(d, 'sup', place)
+            if _ == 0:
+                moving += dice(d, place, 3, [3], model)
+            elif _ == 1:
+                moving += dice(d, place, 1, [2], model, 'del')
+            elif _ == 2:
+                moving += dice(d, place, 2, [0, 2], model)
+            elif _ == 3:
+                moving += dice(d, place, 3, [3, 0], model)
+            place = np.full((column, row, height), -1)
+
         if (moving == 0):
             moving += dice(d,place, 1, [3],model)
             if (moving == 0):
@@ -839,10 +844,10 @@ def dicer_att(adb_devices,q):
     d = attctrl.d
     global count
     attctrl.opengame()
-    if (count==1):
-        shop=Store_Refresh.Shop(d,reader=reader)
-        if(shop.buy_and_fresh()):
-            threading.Thread(target=reset).start()
+    # if (count==1):
+        # shop=Store_Refresh.Shop(d,reader=reader)
+        # if(shop.buy_and_fresh()):
+        #     threading.Thread(target=reset).start()
     attctrl.open_room()
     roomnum=attctrl.room_num()
     print(roomnum)
