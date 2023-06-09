@@ -159,7 +159,7 @@ dicenames2 = ['mimic',
                  'summon',
                  'bubble'
                  ]
-dicenames1 = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
+dicenames1 = ['growning', 'yinyun', 'jocker', 'sup', 'broken_growning', ]
 label_name = ['assassin1', 'assassin2', 'assassin3', 'assassin4', 'assassin5', 'assassin6', 'assassin7', 'background', 'broken_growning1', 'broken_growning2', 
 'broken_growning3', 'broken_growning4', 'broken_growning5', 'broken_growning6', 'broken_growning7', 'bubble1', 'bubble2', 'bubble3', 'bubble4', 'bubble5', 'bubble6', 'bubble7', 'growning1', 'growning2', 'growning3', 'growning4', 'growning5', 'growning6', 'growning7', 'jocker1', 'jocker2', 'jocker3', 'jocker4', 'jocker5', 'jocker6', 'jocker7', 'mimic1', 'mimic2', 'mimic3', 'mimic4', 'mimic5', 'mimic6', 'mimic7', 'summon1', 'summon2', 'summon3', 'summon4', 'summon5', 'summon6', 'summon7', 'sup1', 'sup2', 'sup3', 'sup4', 'sup5', 'sup6', 'sup7', 'yinyun1', 'yinyun2', 'yinyun3', 'yinyun4', 'yinyun5', 'yinyun6', 'yinyun7']
 
@@ -195,25 +195,31 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
                 # if predictpercent<0.8:
                 # print("dicenum from mobilenet",predictednum,"type",predictedname)
                 if (predictedtype_num==7):
-                    image_num=10000
-                    while(os.path.isfile(r"D:\dice_py\123/{}.jpg".format(image_num))):
-                        image_num+=1
-                    #cv2.imwrite(r"D:\dice_py\123/{}.jpg".format(image_num),img)
-                    # 保存pil圖片
-                    pil_img = Image.fromarray(img)
-                    pil_img.save(r"D:\dice_py\123/{}.jpg".format(image_num))
-                    return -1 , -1 , error
-                if mode=='sup':
-                    
-
-                    return int(label_name[predictedtype_num][-1]),dicenames2.index(label_name[predictedtype_num][:-1]),error
-                else:
-                    return int(label_name[predictedtype_num][-1]),dicenames1.index(label_name[predictedtype_num][:-1]),error
-                return predictednum,predictedname,error
-        except Exception as e:
+                    return -1 ,-1,0
+                else: 
+                    try:
+                        if mode=='sup':
+                            return int(label_name[predictedtype_num][-1]),dicenames2.index(label_name[predictedtype_num][:-1]),error
+                        else:
+                            return int(label_name[predictedtype_num][-1]),dicenames1.index(label_name[predictedtype_num][:-1]),error    
+                    except Exception as e:
+                        print(e)
+                        image_num=10000
+                        #檢查路徑是否存在
+                        if not os.path.isdir(r"./data"):
+                            os.mkdir(r"./data")
+                        
+                        while(os.path.isfile("./data/{}.jpg".format(image_num))):
+                            image_num+=1
+                        #cv2.imwrite(r"D:\dice_py\123/{}.jpg".format(image_num),img)
+                        # 保存pil圖片
+                        # pil_img = Image.fromarray(img2)
+                        img2.save(r"./data/{}.jpg".format(image_num))
+                        return -1 , -1 , error
             
-            # pass
-            print(e)
+        except Exception as e:
+            pass
+            # print(e)
                 # if (dice//7==5):
                 #     if dicetype!=2:
                 #         error+=1

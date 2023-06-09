@@ -23,7 +23,7 @@ from torch import nn
 dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
 num_classes = 64
 dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
-dicetype_num_model.load_state_dict(torch.load(r'C:\dice_test\V3model8.pth'))
+dicetype_num_model.load_state_dict(torch.load(r'C:\dice\yinyun_auto_play_randomdice\V3model_epoch_8.pth'))
 dicetype_num_model.eval()
 #遊玩前置作業
 class ctrl_game():
@@ -395,6 +395,7 @@ def dice_number(d,mode,place):
                 pointx = int(j * 62.7 + 144)
                 pointy = i * 60 + 512
                 img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
+                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
                 img2 = Image.fromarray(img2)
                 if mode=='sup':
                     dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
@@ -921,9 +922,9 @@ def sct(d):
       
 reader = easyocr.Reader(['ch_tra'], gpu = True)     
 supmodel = torch.hub.load('ultralytics/yolov5',
-    'custom', path=r'D:\dice_py\yinyun_auto_play\best_sup.pt')
+    'custom', path=r'best_sup.pt')
 attackmodel = torch.hub.load(
-        'ultralytics/yolov5', 'custom', path=r'D:\dice_py\yinyun_auto_play\best(2).pt')
+        'ultralytics/yolov5', 'custom', path=r'best(2).pt')
 attackmodel.conf = 0.5
 supmodel.conf = 0.6
 
@@ -950,8 +951,8 @@ if __name__ == '__main__':
             f.write(result+'\n')
             f.close()
         queue = Queue(3)
-        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5560',queue) )
-        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5558',queue) )
+        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5556',queue) )
+        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5554',queue) )
         tatt.start()
         tsup.start()
         tatt.join()
