@@ -206,16 +206,16 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
                         else:
                             dice_num = int(label_name[predictedtype_num][-1])
                             dicetype = dicenames1.index(label_name[predictedtype_num][:-1])
-                            if not os.path.exists(f"./data/predict_result/{label_name[predictedtype_num]}"):
-                                os.mkdir(f"./data/predict_result/{label_name[predictedtype_num]}")
-                            image_num = 0
-                            while os.path.isfile(f"./data/predict_result/{label_name[predictedtype_num]}/{image_num}.jpg"):
-                                image_num += 1
-                            if image_num>2000:
-                                pass
-                            else:
-                                img2.save(f"./data/predict_result/{label_name[predictedtype_num]}/{image_num}.jpg")
-                            return dice_num, dicetype, error
+                        if not os.path.exists(f"./data/predict_result/{label_name[predictedtype_num]}"):
+                            os.mkdir(f"./data/predict_result/{label_name[predictedtype_num]}")
+                        image_num = 0
+                        while os.path.isfile(f"./data/predict_result/{label_name[predictedtype_num]}/{image_num}.jpg"):
+                            image_num += 1
+                        if image_num>2000:
+                            pass
+                        else:
+                            img2.save(f"./data/predict_result/{label_name[predictedtype_num]}/{image_num}.jpg")
+                        return dice_num, dicetype, error
                             # return int(label_name[predictedtype_num][-1]),dicenames1.index(label_name[predictedtype_num][:-1]),error    
                     except Exception as e:
                         print(e)
