@@ -189,6 +189,8 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
     if model!=None:
         try:
             predictedtype_num=predict_single_image(img2,model)
+            #儲存圖片至data資料夾的預測結果資料夾中
+            #檢查路徑是否存在，不存在則創建
             # print("dicenum from mobilenet",dice,"predictpercent",predictpercent)
             # if mode == 'sup':
             if predictedtype_num!=-1:
@@ -198,10 +200,23 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
                     return -1 ,-1,0
                 else: 
                     try:
-                        if mode=='sup':
-                            return int(label_name[predictedtype_num][-1]),dicenames2.index(label_name[predictedtype_num][:-1]),error
+                        if mode == 'sup':
+                            dice_num = int(label_name[predictedtype_num][-1])
+                            dicetype = dicenames.index(label_name[predictedtype_num][:-1])
                         else:
-                            return int(label_name[predictedtype_num][-1]),dicenames1.index(label_name[predictedtype_num][:-1]),error    
+                            dice_num = int(label_name[predictedtype_num][-1])
+                            dicetype = dicenames1.index(label_name[predictedtype_num][:-1])
+                            if not os.path.exists(f"./data/predict_result/{label_name[predictedtype_num]}"):
+                                os.mkdir(f"./data/predict_result/{label_name[predictedtype_num]}")
+                            image_num = 0
+                            while os.path.isfile(f"./data/predict_result/{label_name[predictedtype_num]}/{image_num}.jpg"):
+                                image_num += 1
+                            if image_num>2000:
+                                pass
+                            else:
+                                img2.save(f"./data/predict_result/{label_name[predictedtype_num]}/{image_num}.jpg")
+                            return dice_num, dicetype, error
+                            # return int(label_name[predictedtype_num][-1]),dicenames1.index(label_name[predictedtype_num][:-1]),error    
                     except Exception as e:
                         print(e)
                         image_num=10000
@@ -211,15 +226,14 @@ def dice_num(img,img2,mode,error, dicetype=-1, model=None):
                         
                         while(os.path.isfile("./data/{}.jpg".format(image_num))):
                             image_num+=1
-                        #cv2.imwrite(r"D:\dice_py\123/{}.jpg".format(image_num),img)
                         # 保存pil圖片
                         # pil_img = Image.fromarray(img2)
                         img2.save(r"./data/{}.jpg".format(image_num))
                         return -1 , -1 , error
             
         except Exception as e:
-            pass
-            # print(e)
+            # pass
+            print(e)
                 # if (dice//7==5):
                 #     if dicetype!=2:
                 #         error+=1
