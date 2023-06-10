@@ -23,7 +23,7 @@ from torch import nn
 dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
 num_classes = 64
 dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
-dicetype_num_model.load_state_dict(torch.load(r'C:\dice\yinyun_auto_play_randomdice\V3model_epoch_8.pth'))
+dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
 dicetype_num_model.eval()
 #遊玩前置作業
 class ctrl_game():
@@ -395,7 +395,7 @@ def dice_number(d,mode,place):
                 pointx = int(j * 62.7 + 144)
                 pointy = i * 60 + 512
                 img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
-                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
                 img2 = Image.fromarray(img2)
                 if mode=='sup':
                     dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
@@ -731,9 +731,7 @@ def sup(d,reconciliation,model):
     place = np.empty((column, row, height))
     place = np.full((column, row, height), -1)
     while (1):
-        
         check=in_the_game(d)
-        
         if(check==0):
             break
         stage=Stage(d)
@@ -744,15 +742,15 @@ def sup(d,reconciliation,model):
         if check>=20 and check<=25:pass #修改邏輯 不被獅子吼 所以不叫骰子 
         else:
             call_dice(d)
-        placedicedector(place,d, -1, -1, model)
+        # placedicedector(place,d, -1, -1, model)
         moving = 0
         location = len(place[place >= 0])
-        if (location >= 8):
-            dice_number(d,'sup',place)
+        # if (location >= 8):
+        dice_number(d,'sup',place)
         moving += dice(d,place, 1, [2],model,'del')
         place = np.full((column, row, height), -1)
         for _ in range(4):
-            placedicedector(place, d=d, mode=model)
+            # placedicedector(place, d=d, mode=model)
             dice_number(d, 'sup', place)
             if _ == 0:
                 moving += dice(d, place, 3, [3], model)
@@ -901,7 +899,7 @@ def dicer_sup(adb_devices,q):
         
         time.sleep(1)
     time.sleep(3)
-    check=sup(d,60,supmodel)
+    check=sup(d,57,supmodel)
     if(check==0):
         level_up(d,[4])
         bubble_sup(d,1000,supmodel)
@@ -951,8 +949,8 @@ if __name__ == '__main__':
             f.write(result+'\n')
             f.close()
         queue = Queue(3)
-        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5556',queue) )
-        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5554',queue) )
+        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5560',queue) )
+        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5558',queue) )
         tatt.start()
         tsup.start()
         tatt.join()
