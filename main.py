@@ -69,11 +69,13 @@ class ctrl_game():
             if ('應用程式版本不同'in text):
                 print('需要更新')
                 self.updata_game()
-            result=self.get_str(370,485,733,800)
+            result=self.get_str(370,485,733,850)
+            # print(result)
             if len(result)>0:
-                result=self.get_str(370,485,733,800)
-                if result[0][1]=='合作模式' or result[0][1]=='30' or result[0][1]=='0/10':
-                    break
+                result=self.get_str(370,485,733,850)
+                for i in range(len(result)):
+                    if result[i][1]=='合作模式' or result[i][1]=='30' or '0/' in result[i][1]:
+                        return
             if time.time()-t>90:
                 print("open game fail")
                 self.d.press("back")
@@ -156,16 +158,17 @@ class ctrl_game():
                 break
     def open_room(self):
         while True:
-            result = self.get_str(370, 485, 733, 800)
-            print(result)
+            result = self.get_str(370, 485, 733, 850)
+            # print(result)
             img=self.d.screenshot(format='opencv')
             text=self.reader.readtext(img, detail=0)
+            # print(text)
             if ('任務'in text and '主要任務'in  text and  '每日任務'in  text):
                 self.d.click(0.896, 0.072)
             if result and result[0][1] == '合作模式': 
                 print('合作!!!')
                 break
-            elif '30' in str(result) or '0/10'in str(result):
+            elif '30' in str(result) or '0/'in str(result):
                 print('沒次數,廣告補充')
                 # self.watch_ad_to_openroom()
                 # if not check:
@@ -176,7 +179,7 @@ class ctrl_game():
                 # self.open_room()
                 self.d.click(450,740)
                 time.sleep(2+random.random()*5)
-                self.d.click(320, 550)
+                self.d.click(0.742, 0.611)
                 time.sleep(2+random.random()*5)
                 self.d.click(320, 800)  #確認
         while True:
@@ -201,6 +204,7 @@ class ctrl_game():
                 self.click_position(150, 572)
             else:
                 self.click_position(365, 572)    
+            time.sleep(5)
     def click_position(self, x, y):
         self.d.click(x/self.width, y/self.height)
     def check_ingame(self):
@@ -867,18 +871,26 @@ def dicer_att(adb_devices,q):
     check=attack(d,attackmodel,q)
     if(check!=0):
         level_up(d,[0])
-        d.app_stop('com.percent.royaldice')
+        # d.app_stop('com.percent.royaldice')
         q.put(1)
     else:
         q.put(0)
+    place=np.full((3,5,2),-1)
+    while(not end_game(d)):
+        dice_number(d,'atta',place)
+        time.sleep(5)
+        
+
 
 def dicer_sup(adb_devices,q):
     supctrl=ctrl_game(adb_devices,reader,q,act='sup') 
     d =supctrl.d
     supctrl.opengame()
     supctrl.open_room()
+    
     while(q.empty()):pass
     roomnum=q.get()
+    time.sleep(5)
     supctrl.input_the_room_num(roomnum)
     start_time=time.time()
     while(not supctrl.check_ingame()):
@@ -899,7 +911,7 @@ def dicer_sup(adb_devices,q):
         
         time.sleep(1)
     time.sleep(3)
-    check=sup(d,57,supmodel)
+    check=sup(d,62,supmodel)
     if(check==0):
         level_up(d,[4])
         bubble_sup(d,1000,supmodel)
