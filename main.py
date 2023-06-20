@@ -291,9 +291,9 @@ def call_dice(d):
             crop_img = img[750:830,230:310]
             b,g,r=crop_img[50,50]
             if(b in range(245,256) and g in range(245,256) and r in range(245,256)):
-                d.double_click(270+int(random.random()*30), 830+int(random.random()*15))  
+                d.double_click(270+int(random.random()*30), 790+int(random.randint(-5,5)))  
         except :
-            d.click(270+int(random.random()*30), 830+int(random.random()*20)) 
+            d.click(270+int(random.random()*30), 790+int(random.randint(-5,5))) 
 
 def level_up(d,dices):
     times=0
@@ -945,6 +945,7 @@ def reset():
     count=1
 global count
 count=1
+import ctypes
 if __name__ == '__main__':
     os.system("adb devices")
     for i in range(30):
@@ -965,5 +966,15 @@ if __name__ == '__main__':
         tatt = threading.Thread( target=dicer_att, args=( 'emulator-5558',queue) )
         tatt.start()
         tsup.start()
-        tatt.join()
-        tsup.join()
+        tatt.join(2000)
+        tsup.join(2000)
+        # 強制終止線程
+        if tsup.is_alive():
+            # 如果你確定線程在 join() 方法上阻塞，可以考慮使用下面的代碼來強制終止線程
+            tid = tsup.ident
+            res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(SystemExit))
+            if res > 1:
+                ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
+                print('無法終止線程')
+            else:
+                print('線程已終止')
