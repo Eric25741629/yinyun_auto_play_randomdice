@@ -20,11 +20,7 @@ from model import Classifier
 from model import models
 from torch import nn
 
-dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
-num_classes = 64
-dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
-dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
-dicetype_num_model.eval()
+
 #遊玩前置作業
 class ctrl_game():
     def __init__(self,devices_ip,reader,q,act="att"):
@@ -247,181 +243,175 @@ class ctrl_game():
             except:pass      
         return 0
 #遊玩中控制類
+dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
+num_classes = 64
+dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
+dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
+dicetype_num_model.eval()
+#創建一個名為play繼承ctrl_game的類
+# def dice_number(d,mode,place):
+#     global error
+#     try:
+#         image = get_screenshot(d)
+#         for i in range(0, 3):
+#             for j in range(0, 5):
+#                 pointx = j * 62 + 120
+#                 pointy = i * 60 + 482
+#                 img1 = image[pointy + 15:pointy +           
+#                             50, pointx + 5:pointx + 48]
+#                 pointx = int(j * 62.7 + 144)
+#                 pointy = i * 60 + 512
+#                 img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
+#                 img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+#                 img2 = Image.fromarray(img2)
+#                 if mode=='sup':
+#                     dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
+#                 else:
+#                     dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
+#                 #print(x, y)
+#                 try:
+#                     place[i][j][0] = dicenum
+#                     place[i][j][1] = dicetype
+#                 except:
+#                     pass
+#     except:
+#         pass
+#     print("dice_number:")
+#     for i in range(0, 3):
+#         for j in range(0, 5):
+#             if place[i][j][0] == -1:
+#                 print("{:>5}".format('none'), end=' ')
+#             else:
+#                 print("{:>5}".format(place[i][j][0]), end=' ')
+#         print()
+#     print()
+
+dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
+num_classes = 64
+dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
+dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
+dicetype_num_model.eval()
+reader = easyocr.Reader(['ch_tra'], gpu = True)    
 class play():
-    def __init__(self,d,reader,act,model):
-        self.d=d
+    def __init__(self,devices,reader,q:Queue,player='att'):
+        self.d=devices
         self.reader=reader
-        self.width, self.height = self.d.window_size()
-        self.act=act
-        self.model=model
+        self.player=player
+        self.model=dicetype_num_model
+        self.q=q
         #一個3*5*2的矩陣
-        self.place=np.array(3,5,2)
-        self.place=np.zeros((3,5,2)).fill(-1)
-    def get_dice_type_and_num(self, who=None,path=None):
+        self.place = np.full((3, 5, 2), -1)
+    def get_screenshot(self, format='opencv'):
+        img = None
+        while img is None:
+            img = self.d.screenshot(format=format)
+        return img
+    def get_Stage(self):
+        for i in range(0,3):
+            img = self.get_screenshot()
+            img=img[15:50,120:250]
+            ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)  # 二值化
+            result = self.reader.readtext(binary)
+            #print(result)
+            if(result!=[]):
+                numbers ="".join([x for x in result[0][1] if x.isdigit()])
+                if numbers:
+                    print('關卡:',int(numbers))
+                    return int(numbers)
+        return 0
+    def get_dice(self, who=None,path=None):
         time.sleep(0.2)
         if who == 'test' and path is not None:
-            image=cv2.imread(path)
+            img=cv2.imread(path)
         else:
-            while(1):
-                image = self.d.screenshot(format='opencv')
-                if image is not None:
-                    break
-        self.place.fill(-1) 
-    def printboardnum(self):
+            img=self.get_screenshot()
+        for i in range(0, 3):
+            for j in range(0, 5):
+                pointx = int(j * 62.7 + 144)
+                pointy = i * 60 + 512
+                img2 = img[pointy -32:pointy + 30, pointx - 30:pointx + 32]
+                cv2.imshow('test',img2)
+                cv2.waitKey(0)
+                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+                img2 = Image.fromarray(img2)
+                dicenum, dicetype = detect_single_dice(img2,self.player,self.model)
+                print(dicenum, dicetype, end=' ')
+
+                self.place[i][j][0] = dicetype
+                self.place[i][j][1] = dicenum
+    def printboardtype(self):
         for i in range(0,3):
             for j in range(0,5):
                 print(self.place[i][j][0],end=' ')
             print()
-        
-#class game
-def color(img,x,y):
-    print(img[x,y])
-def get_screenshot(d, format='opencv'):
-    img = None
-    while img is None:
-        img = d.screenshot(format=format)
-    return img
-
-def crop_image(img, x1, y1, x2, y2):
-    return img[y1:y2, x1:x2]
-def call_dice(d):
-    for _ in range(0,5):
-        try:
-            img=get_screenshot(d)
-            crop_img = img[750:830,230:310]
-            b,g,r=crop_img[50,50]
-            if(b in range(245,256) and g in range(245,256) and r in range(245,256)):
-                d.double_click(270+int(random.random()*30), 790+int(random.randint(-5,5)))  
-        except :
-            d.click(270+int(random.random()*30), 790+int(random.randint(-5,5))) 
-
-def level_up(d,dices):
-    times=0
-    while(1):
-        level_list=[]
-        img=get_screenshot(d)
-        for i in dices:
-            crop_img = img[900:945,50+i*100:130+i*100]
-            result = reader.readtext(crop_img)
-            print(result)
-            if(result!=[]):
-                level_list.append(i)
-        if(level_list==[]):
-            times=times+1
-            if(times>2):
-                break
-        for i in level_list:
-            for _ in range(0,random.randint(3,4)):
-                d.click(80+i*100+int(random.random()*10), 900)
-            #d.click(80+i*100+int(random.random()*10), 900) 
-        time.sleep(2)
-        
-
-def check_into_game(d):
-    while(1):
-        #img=cv2.imread(r'E:/Screenshot_20220819-005635.png')
-        img=get_screenshot(d)
-            
-        img=img[733:800,370:485]
-        ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)  # 二值化
-        dst = 255 - binary
-        result = reader.readtext(dst)
-        if(result!=[]):
-            if(int(result[0][1])>=1):
-                print('已進入遊戲')
-                break
-
-
-def object_detection(img, model):
-    results = model(img)
-    results = results.pandas().xyxy[0].to_dict(orient="records")
-    return results
-
-def get_dice_value(x, y):
-    return int((x - 115) / 60), int((y - 475) / 60)
-
-def placedicedector(place, d, i=-1, j=-1, mode='None'):
-    time.sleep(0.2)
-    img = get_screenshot(d)
-    results = object_detection(img, mode)
-    for result in results:
-        cs = result['class']
-        x1 = int(result['xmin'])
-        y1 = int(result['ymin'])
-        x, y = get_dice_value(x1, y1)
-        if not (0 <= x <= 4 and 0 <= y <= 2):
-            continue
-        place[y][x][1] = cs
-        if y == i and j == x:
-            return cs
-
-def Stage(d):
-    for i in range(0,3):
-        img = get_screenshot(d)
-        img=img[15:50,120:250]
-        ret, binary = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)  # 二值化
-        result = reader.readtext(binary)
-        #print(result)
-        if(result!=[]):
-            numbers ="".join([x for x in result[0][1] if x.isdigit()])
-            if numbers:
-                print('關卡:',int(numbers))
-                return int(numbers)
-    return 0
-
-def end_game(d):
-    try:
-        img = get_screenshot(d)
-        img=img[850:890,240:320]   
-        result = reader.readtext(img)       
-        print(result) 
-        if(result!=[]):
-            if(result[0][1]=='確認'):
-                for i in range(3):
-                    d.click(250,870)
-                    time.sleep(2)
-                return 1
-        else:
-            return 0    
-    except:
-        pass
-error=0
-def dice_number(d,mode,place):
-    global error
-    try:
-        image = get_screenshot(d)
-        for i in range(0, 3):
-            for j in range(0, 5):
-                pointx = j * 62 + 120
-                pointy = i * 60 + 482
-                img1 = image[pointy + 15:pointy +           
-                            50, pointx + 5:pointx + 48]
-                pointx = int(j * 62.7 + 144)
-                pointy = i * 60 + 512
-                img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
-                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-                img2 = Image.fromarray(img2)
-                if mode=='sup':
-                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
-                else:
-                    dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
-                #print(x, y)
-                try:
-                    place[i][j][0] = dicenum
-                    place[i][j][1] = dicetype
-                except:
-                    pass
-    except:
-        pass
-    print("dice_number:")
-    for i in range(0, 3):
-        for j in range(0, 5):
-            if place[i][j][0] == -1:
-                print("{:>5}".format('none'), end=' ')
+    def printboardnum(self):
+        for i in range(0,3):
+            for j in range(0,5):
+                print(self.place[i][j][1],end=' ')
+            print()
+    def call_dice(self):
+        for _ in range(5):
+            try:
+                img = self.get_screenshot()
+                crop_img = img[750:830, 230:310]
+                b, g, r = crop_img[50, 50]
+                if 245 <= b <= 255 and 245 <= g <= 255 and 245 <= r <= 255:
+                    x = 270 + random.randint(-5, 5)
+                    y = 790 + random.randint(-5, 5)
+                    self.d.click(x, y)
+            except:
+                x = 270 + random.randint(-5, 5)
+                y = 790 + random.randint(-5, 5)
+                self.d.click(x, y)
+    def level_up(self, dices):
+        times = 0
+        img = self.get_screenshot()  # 进行一次屏幕截图
+        while times <= 2:
+            level_list = []
+            for i in dices:
+                if self._check_dice(img, i):
+                    level_list.append(i)
+            if not level_list:
+                times += 1
             else:
-                print("{:>5}".format(place[i][j][0]), end=' ')
-        print()
-    print()
+                for i in level_list:
+                    random_offset = int(random.random() * 10)
+                    for _ in range(0, random.randint(5, 9)):
+                        click_x = 80 + i * 100 + random_offset
+                        self.d.click(click_x, 900)
+                    time.sleep(2)
+
+    # 其他辅助函数
+    def _check_dice(self, img, dice):
+        crop_img = img[900:945, 50 + dice * 100:130 + dice * 100]
+        result = self.reader.readtext(crop_img)
+        print(result)  # 调试输出
+        return bool(result)
+
+    def end_game(self):
+        try:
+
+            img = self.get_screenshot()
+            img=img[850:890,240:320]   
+            result = self.reader.readtext(img)       
+            print(result) 
+            if result:
+                for i in result:
+                    if (i[1]=='確認'):
+                        for _ in range(3):
+                            self.d.click(270,870)
+                            time.sleep(2)
+                        return 1
+            else:
+                return 0    
+        except:
+            return 0 
+    def mergydice(self, character_positions, target_character,remove='none'):
+        
+        pass
+        
+error=0
+
 def dice(d,place, want_to_use, dicelists,model,delt='none'):
     moving = 0
     can_list = []
