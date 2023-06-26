@@ -53,6 +53,13 @@ class ctrl_game():
         while not self.d.xpath('//*[@content-desc="開始玩"]'):
             print('start') 
         self.d.xpath('//*[@content-desc="開始玩"]')()
+    def in_the_game(self):
+        currentApp = self.d.app_list_running()
+        for i in currentApp:
+            #print(i)
+            if i == 'com.percent.royaldice':
+                return 1
+        return 0
     def opengame(self):
         currentApp = self.d.app_list_running()
         if "com.percent.royaldice" not in currentApp:
@@ -242,49 +249,6 @@ class ctrl_game():
                     break
             except:pass      
         return 0
-#遊玩中控制類
-dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
-num_classes = 64
-dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
-dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
-dicetype_num_model.eval()
-#創建一個名為play繼承ctrl_game的類
-# def dice_number(d,mode,place):
-#     global error
-#     try:
-#         image = get_screenshot(d)
-#         for i in range(0, 3):
-#             for j in range(0, 5):
-#                 pointx = j * 62 + 120
-#                 pointy = i * 60 + 482
-#                 img1 = image[pointy + 15:pointy +           
-#                             50, pointx + 5:pointx + 48]
-#                 pointx = int(j * 62.7 + 144)
-#                 pointy = i * 60 + 512
-#                 img2 = image[pointy -32:pointy + 30, pointx - 30:pointx + 31]
-#                 img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-#                 img2 = Image.fromarray(img2)
-#                 if mode=='sup':
-#                     dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
-#                 else:
-#                     dicenum, dicetype,error = dice_num(img1,img2,mode,error, int(place[i][j][1]),dicetype_num_model)
-#                 #print(x, y)
-#                 try:
-#                     place[i][j][0] = dicenum
-#                     place[i][j][1] = dicetype
-#                 except:
-#                     pass
-#     except:
-#         pass
-#     print("dice_number:")
-#     for i in range(0, 3):
-#         for j in range(0, 5):
-#             if place[i][j][0] == -1:
-#                 print("{:>5}".format('none'), end=' ')
-#             else:
-#                 print("{:>5}".format(place[i][j][0]), end=' ')
-#         print()
-#     print()
 
 dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
 num_classes = 64
@@ -299,6 +263,7 @@ class play():
         self.player=player
         self.model=dicetype_num_model
         self.q=q
+        self.wave=0
         #一個3*5*2的矩陣
         self.place = np.full((3, 5, 2), -1)
     def get_screenshot(self, format='opencv'):
@@ -306,7 +271,7 @@ class play():
         while img is None:
             img = self.d.screenshot(format=format)
         return img
-    def get_Stage(self):
+    def get_wave(self):
         for i in range(0,3):
             img = self.get_screenshot()
             img=img[15:50,120:250]
@@ -319,26 +284,30 @@ class play():
                     print('關卡:',int(numbers))
                     return int(numbers)
         return 0
-    def get_dice(self, who=None,path=None):
+
+
+    def get_place(self, who=None, path=None):
         time.sleep(0.2)
         if who == 'test' and path is not None:
-            img=cv2.imread(path)
+            img = cv2.imread(path)
         else:
-            img=self.get_screenshot()
+            img = self.get_screenshot()
         for i in range(0, 3):
             for j in range(0, 5):
-                pointx = int(j * 62.7 + 144)
-                pointy = i * 60 + 512
-                img2 = img[pointy -32:pointy + 30, pointx - 30:pointx + 32]
-                cv2.imshow('test',img2)
-                cv2.waitKey(0)
-                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-                img2 = Image.fromarray(img2)
-                dicenum, dicetype = detect_single_dice(img2,self.player,self.model)
-                print(dicenum, dicetype, end=' ')
+                self.process_dice_image(img, i, j)
 
-                self.place[i][j][0] = dicetype
-                self.place[i][j][1] = dicenum
+    def process_dice_image(self, img, i, j):
+        pointx = int(j * 62.7 + 144)
+        pointy = i * 60 + 512
+        img2 = img[pointy - 32:pointy + 30, pointx - 30:pointx + 32]
+        cv2.imshow('test', img2)
+        cv2.waitKey(0)
+        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+        img2 = Image.fromarray(img2)
+        dicenum, dicetype = detect_single_dice(img2, self.player, self.model)
+        self.place[i][j][0] = dicetype
+        self.place[i][j][1] = dicenum
+
     def printboardtype(self):
         for i in range(0,3):
             for j in range(0,5):
@@ -367,19 +336,20 @@ class play():
         times = 0
         img = self.get_screenshot()  # 进行一次屏幕截图
         while times <= 2:
-            level_list = []
-            for i in dices:
-                if self._check_dice(img, i):
-                    level_list.append(i)
+            level_list = [i for i, dice in enumerate(dices) if self._check_dice(img, dice)]
             if not level_list:
                 times += 1
             else:
-                for i in level_list:
-                    random_offset = int(random.random() * 10)
-                    for _ in range(0, random.randint(5, 9)):
-                        click_x = 80 + i * 100 + random_offset
-                        self.d.click(click_x, 900)
+                for index in level_list:
+                    self.click_dice_multiple_times(index)
                     time.sleep(2)
+
+    def click_dice_multiple_times(self, index):
+        random_offset = random.randint(-5, 5)
+        for _ in range(5, 9):
+            click_x = 80 + index * 100 + random_offset
+            self.d.click(click_x, 900)
+
 
     # 其他辅助函数
     def _check_dice(self, img, dice):
@@ -390,397 +360,168 @@ class play():
 
     def end_game(self):
         try:
-
             img = self.get_screenshot()
-            img=img[850:890,240:320]   
-            result = self.reader.readtext(img)       
-            print(result) 
+            img = self.crop_image(img, 850, 890, 240, 320)
+            result = self.reader.readtext(img)
             if result:
-                for i in result:
-                    if (i[1]=='確認'):
+                for index, text in result:
+                    if text == '確認':
                         for _ in range(3):
-                            self.d.click(270,870)
+                            self.d.click(270, 870)
                             time.sleep(2)
-                        return 1
-            else:
-                return 0    
+                        return True
+            return False
         except:
-            return 0 
-    def mergydice(self, character_positions, target_character,remove='none'):
-        
-        pass
-        
+            return False
+
+    def crop_image(self, img, top, bottom, left, right):
+        return img[top:bottom, left:right]
+    def move_dice(self, row, column, target_x, target_y, touch_time):
+        try:
+            # Simulate pressing the dice
+            start_x = column * 62 + 120 + random.randint(25, 40)
+            start_y = row * 60 + 470 + random.randint(25, 40)
+            end_x = int(target_x) * 62 + 120 + random.randint(25, 40)
+            end_y = int(target_y) * 60 + 480+ random.randint(25, 40)
+            self.d.swipe(start_x, start_y, end_x, end_y, 0.05)
+        except Exception as err:
+            print(err)
+            pass
+
+    def mergydice(self, use_type: int, use_num: int, target_type: int, target_num: int, use_all: bool, remove: bool, cache: list):
+        use = np.where((self.place[:, :, 0] == use_type) & (self.place[:, :, 1] == use_num))
+        use = np.transpose(use).tolist()
+        target = np.where((self.place[:, :, 0] == target_type) & (self.place[:, :, 1] == target_num))
+        target = np.transpose(target).tolist()
+
+        if not use or not target:
+            return 0
+
+        if not cache:
+            if use_all:
+                self.move_all_dices(use, target, remove)
+            else:
+                self.move_single_dice(use, target, remove)
+        self.get_place()
+    def move_all_dices(self, use, target, remove):
+        for i in use:
+            if not target:
+                break
+            chosen = random.choice(range(len(target)))
+            selected = target.pop(chosen) if remove else target[chosen]
+            self.move_dice(i[0], i[1], selected[0], selected[1], 0.05)
+
+    def move_single_dice(self, use, target, remove):
+        chosen = random.choice(range(len(target)))
+        selected = target.pop(chosen)
+        self.move_dice(use[0][0], use[0][1], selected[0], selected[1], 0.05)
+    def yinyun_attack(self):
+        game_end = False
+        know=0
+        while(not game_end):
+            self.wave=max(self.wave,self.get_wave())
+            if(self.wave>=20 & know==0):
+                self.q.put("暗殺")
+                know=1
+            self.call_dice()
+            self.get_place()
+            for i in range(1,3):
+                self.mergydice(2,i,0,i,True,False,[])
+            for i in range(1,8):
+                self.mergydice(2,i,1,i,True,False,[])
+            for i in range(1,8):
+                self.mergydice(3,i,2,i,True,True,[])
+            yinyun_num = np.sum(self.place[:, :,1] == 1)
+            if (yinyun_num == 15):
+                self.q.put("暗殺")
+                return 1
+            game_end=self.end_game()
+            if(game_end):
+                self.q.put("end_game")
+                return 0
+    def sup_yinyun(self):
+        game_end = False
+        while(not game_end):
+            self.wave=max(self.wave,self.get_wave())
+            if (self.wave <20 or self.wave>25):
+                self.call_dice()           
+            self.get_place()
+            for _ in range(4):
+                if _ == 0:
+                    for i in range(1,8):
+                        self.mergydice(3,i, 3,i, True, True, [])
+                elif _ == 1:
+                    for i in range(1,8):
+                        self.mergydice(1,i, 2,i, True, False, [])
+                elif _ == 2:
+                    for i in range(1,8):
+                        self.mergydice(2,i, 0,i, True, True, [])
+                    for i in range(1,8):
+                        self.mergydice(2,i, 2,i, True, True, [])
+                elif _ == 3:
+                    for i in range(1,8):
+                        self.mergydice(3,i, 3,i, True, True, [])
+                    for i in range(1,8):
+                        self.mergydice(3,i, 0,i, True, True, [])
+            
+            game_end=self.end_game()
+            if(game_end):
+                self.q.put("end_game")
+                return 0
 error=0
-
-def dice(d,place, want_to_use, dicelists,model,delt='none'):
-    moving = 0
-    can_list = []
-
-    for dicelist in dicelists:
-        for i in range(0, 3):
-            for j in range(0, 5):
-                if place[i,j,1]==dicelist:
-                    can_list.append([i,j,place[i,j,0],place[i,j,1]])
-    #print(can_list)
-    for i in range(0, 3):
-        for j in range(0, 5):
-            if place[i,j,1]==want_to_use:
-                for k in range(0,len(can_list)):
-                    if can_list[k][0]==i and can_list[k][1]==j:
-                            continue
-                    if place[i,j,0]==can_list[k][2]:
-                        dice = placedicedector(
-                                place,d, i, j, mode=model)
-                        if(dice!=place[i,j,1]):
-                            #print('錯誤')
-                            break
-                        '''dice = placedicedector(
-                                place,d, can_list[k][0],can_list[k][1], mode=model)
-                        if(dice!=can_list[k][3]):
-                            print('錯誤')
-                            break'''
-                        print('起點'+str(i)+" "+str(j)+'目標'+str(can_list[k]))
-                        pointx = int(can_list[k][1])*62+120+ random.randint(25,40)
-                        pointy = int(can_list[k][0])*60+480+ random.randint(25,40)
-                        #print(i,j,can_list[k][1],can_list[k][1])
-                        touchtime = (
-                                sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.001)
-                        #move_dice(d,x1=j*62+150,y1=i*60+500,x2=pointx,y2=pointy,duringtime=touchtime.real)
-                        move_dice(d, i, j,  int(can_list[k][1]), int(can_list[k][0]), touchtime)
-                        dice = placedicedector(
-                                place,d, i, j, mode=model)
-                        if dice != want_to_use:
-                            #print('確認使用成功')
-                            moving = moving+1
-                            if delt=='none':
-                                can_list.pop(k)
-                                for _ in range(0,len(can_list)):
-                                    try:
-                                        if can_list[_][0]==i and can_list[_][1]==j:
-                                            can_list.pop(_)
-                                            break
-                                    except Exception as err:
-                                        print(err)
-                                        pass
-                                place[i,j,0]=-1
-                                place[i,j,1]=-1
-                                d.click(270, 830) 
-                                break
-                            else:
-                                break    
-    return moving
+dicenames = ['mimic','jocker','assassin','summon', 'bubble']
 import random
 
-def move_dice(d, i, j, pointx, pointy, touchtime):
-    try:
-        # 模擬按下骰子
-        x0 = j * 62 + 120 + random.randint(25, 40)
-        y0 = i * 60 + 470 + random.randint(25, 40)
-        
-        d.touch.down(x=x0, y=y0)
-        x1 = int(pointx) * 62 + 120 + 30
-        y1 = int(pointy) * 60 + 480 + 30
-        # 403 559 21354 30510
-        print(x0, y0, x1, y1)
-        #計算最短距離並移動
-        #將距離切成四個點
-        #計算每個點的距離
-        #加上隨機值
-        for _ in range(0,6):
-            x2 = x0+(_*(x1-x0)/6)+random.randint(-5,5)
-            y2 = y0+(_*(y1-y0)/6)+random.randint(-5,5)
-            d.touch.move(x=x2, y=y2)
-            # time.sleep(touchtime.real/8)
-        # time.sleep(touchtime.real/2)
-        # d.touch.move(x=(x1+x0)//2, y=(y1+y0)//2)
-        # time.sleep(touchtime.real/2)
-        d.touch.up(x=x1 + random.randint(-5, 5), y=y1 + random.randint(-5, 5))
-        # 計算抛骰子的軌跡
-        # 計算弧形軌跡的控制點
-        # cx = (x0 + x1) / 2 + random.randint(-10, 10)
-        # cy = (y0 + y1) / 2 + abs(x1 - x0) / 2 + random.randint(-10, 10)
-        # for t in range(5):
-        #     if t < 1:
-        #         # 起始部分：貝茲曲線
-        #         u = t / 10
-        #     elif t < 3:
-        #         # 中間部分：貝茲曲線
-        #         u = (t - 1) / 20
-        #     else:
-        #         # 結束部分：貝茲曲線
-        #         u = (t - 3) / 10
-        #     x = int((1 - u) ** 2 * x0 + 2 * u * (1 - u) * cx + u ** 2 * x1)
-        #     y = int((1 - u) ** 2 * y0 + 2 * u * (1 - u) * cy + u ** 2 * y1)
-        #     # 模擬移動骰子
-        #     d.touch.move(x=x + random.randint(-5, 5), y=y + random.randint(-5, 5))
-        # # 模擬放開骰子
-    except Exception as err:
-        print(err)
-        pass    
-def no_check_dice(d,place, want_to_use, dicelists,model,delt='none'):
-    moving = 0
-    can_list = []
-    for dicelist in dicelists:
-        for i in range(0, 3):
-            for j in range(0, 5):
-                if place[i,j,1]==dicelist:
-                    can_list.append([i,j,place[i,j,0],place[i,j,1]])
-    #print(can_list)
-    for i in range(0, 3):
-        for j in range(0, 5):
-            if place[i,j,1] != want_to_use:continue
-            for k in range(0,len(can_list)):
-                if can_list[k][0]==i and can_list[k][1]==j:
-                        continue
-                if place[i,j,0]==can_list[k][2]:
-                    dice = placedicedector(
-                            place,d, i, j, mode=model)
-                    if(dice!=place[i,j,1]):
-                        #print('錯誤')
-                        break
-                    '''dice = placedicedector(
-                            place,d, can_list[k][0],can_list[k][1], mode=model)
-                    if(dice!=can_list[k][3]):
-                        print('錯誤')
-                        break'''
-                    #print('起點'+str(place[i,j])+'目標'+str(can_list[k]))
-                    pointx = int(can_list[k][1])*62+120+ random.randint(25,40)
-                    pointy = int(can_list[k][0])*60+480+ random.randint(25,40)
-                    touchtime = (
-                            sqrt(pow(j*62+150-pointx, 2)+pow(i*60+510-pointy, 2))*0.0001)
-                    move_dice(d, i, j,  int(can_list[k][1]), int(can_list[k][0]), touchtime)
-                    #dice = placedicedector(
-                    #        place,d, i, j, mode=model)
-                    #if dice != want_to_use:
-                    #    print('確認使用成功')
-                    #    moving = moving+1
-                    if delt=='none':
-                        can_list.pop(k)
-                        for _ in range(0,len(can_list)):
-                            try:
-                                if can_list[_][0]==i and can_list[_][1]==j:
-                                    can_list.pop(_)
-                                    break
-                            except Exception as err:
-                                print(err)
-                                pass
-                        place[i,j,0]=-2
-                        place[i,j,1]=-2
-                        d.click(270, 830) 
-                        break
-                    else:
-                        break    
-    return moving
 dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
-def attack_dice(d,place,model):
-    #待改
-    for i in range(0, 3):
-        for j in range(0, 5):
-            if int (place[i][j][1]) != 2:continue
-            try:
-                yinyuns = np.where(place[:, :, 1] == 1)
-                print(yinyuns)
-                if not yinyuns:
-                    break
-                listOfIndices = list(zip(yinyuns[0], yinyuns[1]))
-                lenth = len(listOfIndices)
-                # 目標
-                for times in range(0, lenth):
-                    pointx = int(
-                        listOfIndices[times][1]) *62+150
-                    pointy = int(
-                        listOfIndices[times][0]) *60+510
-                    
-                    print(str(j*62+150)+" "+str(i*60+510)+'to->'+str(pointx)+" "+str(pointy))
-                    dice = placedicedector( place,d, i, j, mode=model)
-                    if dice != 2:
-                        print('確認複製成功')
-                        break
-                    else:
-                        touchtime = (
-                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 510 - pointy, 2)) * 0.001)
-                        print(listOfIndices[times][1], listOfIndices[times][0])
-                        move_dice(d, i, j,  listOfIndices[times][1],  listOfIndices[times][0], touchtime)
-                        # print(touchtime)
-                        # d.touch.down(
-                        #     x=j*62+150, y=i*60+510)  # 模拟按下
-                        # down 和 move 之间的延迟，自己控制
 
-                        # time.sleep(touchtime.real)
-                        # d.touch.move(x=pointx, y=pointy)  # 模拟移动
-                        # time.sleep(touchtime.real)
-                        # d.touch.up(x=pointx, y=pointy)
-                        # time.sleep(1)
-                        #d.swipe_points(
-                        #    [(j * 60 + 150, i * 60 + 550), (pointx, pointy)], touchtime.real)
-                        #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
-                    time.sleep(1)
-            except Exception as err:
-                print(err)
-                pass   
-    for i in range(0, 3):
-        for j in range(0, 5):
-            if int (place[i][j][1]) != 3:continue
-              
-            try:
-                yinyuns = np.where(place[:, :, 1] == 1)
-                if not yinyuns:
-                    break
-                listOfIndices = list(zip(yinyuns[0], yinyuns[1]))
-                lenth = len(listOfIndices)
-                # 目標
-                for times in range(0, lenth):
-                    pointx = int(
-                        listOfIndices[times][1]) * 62 + 120 + random.randint(25,40)
-                    pointy = int(
-                        listOfIndices[times][0]) * 62 + 470 + random.randint(25,40)
-                    #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy))
-                    print(listOfIndices[times][1], listOfIndices[times][0])
-                    dice = placedicedector(
-                        place,d, i, j, mode=model)
-                    if dice != 3:
-                        #print('確認複製成功')
-                        break
-                    else:
-                        touchtime = (
-                            sqrt(pow(j * 60 + 150 - pointx, 2) + pow(i * 60 + 550 - pointy, 2)) * 0.0001)
-                        move_dice(d, i, j,  listOfIndices[times][1], listOfIndices[times][0], touchtime)
-                        # print(touchtime)
-                        # d.touch.down(
-                        #     x=j*62+150, y=i*60+500)  # 模拟按下
-                        # # down 和 move 之间的延迟，自己控制
-                        # time.sleep(touchtime.real)
-                        # d.touch.move(x=pointx, y=pointy)  # 模拟移动
-                        # time.sleep(touchtime.real)
-                        # d.touch.up(x=pointx, y=pointy)
-                        time.sleep(0.5)
-                        #print(str(j*62+150)+" "+str(i*60+490)+'to->'+str(pointx)+" "+str(pointy)+str(touchtime))
-                    time.sleep(0.5)
-            except Exception as err:
-                print(err)
-                pass   
-dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
-def attack(d,model,q):
-    i = 1
-    column, row, height = 3, 5, 2
-    place = np.empty((column, row, height))
-    place = np.full((column, row, height), -1)
-    stage=0
-    put=0
-    check=0
-    while (1):
-        
-        stage=max(Stage(d),stage)
-        #sct(d)
-        if(stage>20 and put==0):
-            q.put(1)
-            put=1
-        moving=0
-        call_dice(d)
-        placedicedector(place,d=d, mode=model)
-        dices_num = len([b for a in place for b in a if b[1]>=0])
-        if (dices_num >= 0):
-            dice_number(d,'attack',place)
-        #dices_num = len([b for a in place for b in a if b[0]>=0])
-        print(dices_num)
-        print('骰子種類')
-        for i in range(0, 3):
-            for j in range(0, 5):
-                # 空2格對齊
-                print("{:2d} ".format(place[i,j,1]), end="")
-            print()
-        '''print('骰子點數')
-        for i in range(0, 3):
-            for j in range(0, 5):
-                print(place[i,j,0],end="")
-            print()'''    
-        if (dices_num >= 5):
-            moving+=dice(d,place, 2, [1],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'attack',place)
-        if (dices_num >= 10):
-            moving+=dice(d,place, 3, [1],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'attack',place)
-        if(moving==0 and ((np.sum(place[:, :, 1]==0)+np.sum(place[:, :, 1]==4)==0))and dices_num >= 13) :
-            if(np.sum(place[:, :, 1]==2)>2):
-                #attack_dice(d,place,model)
-                moving+=dice(d,place, 2, [2],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'attack',place)        
-        if(moving==0 and ((np.sum(place[:, :, 1]==0)+np.sum(place[:, :, 1]==4)==0))and dices_num >= 13) : 
-            print('偵錯')             
-            attack_dice(d,place,model)  
-        yinyun_num = np.sum(place[:, :,1] == 1)
-        if (yinyun_num == 15):
-            print('滿版陰陽')
-            check+=1
-            if(check==3):
-                return 1
-        i=end_game(d)
-        if(i==1):
-            return 0
-def sup(d,reconciliation,model):
-    column, row, height = 3, 5, 2
-    place = np.empty((column, row, height))
-    place = np.full((column, row, height), -1)
-    while (1):
-        check=in_the_game(d)
-        if(check==0):
-            break
-        stage=Stage(d)
-        #sct(d)
-        if(stage>reconciliation):
-            return 0
-        #sct(d)
-        if check>=20 and check<=25:pass #修改邏輯 不被獅子吼 所以不叫骰子 
-        else:
-            call_dice(d)
-        # placedicedector(place,d, -1, -1, model)
-        moving = 0
-        location = len(place[place >= 0])
-        # if (location >= 8):
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 1, [2],model,'del')
-        place = np.full((column, row, height), -1)
-        for _ in range(4):
-            # placedicedector(place, d=d, mode=model)
-            dice_number(d, 'sup', place)
-            if _ == 0:
-                moving += dice(d, place, 3, [3], model)
-            elif _ == 1:
-                moving += dice(d, place, 1, [2], model, 'del')
-            elif _ == 2:
-                moving += dice(d, place, 2, [0, 2], model)
-            elif _ == 3:
-                moving += dice(d, place, 3, [3, 0], model)
-            place = np.full((column, row, height), -1)
 
-        if (moving == 0):
-            moving += dice(d,place, 1, [3],model)
-            if (moving == 0):
-                #place要是滿的才能用
-                location = len(place[place >= 0])
-                if location == 15:  # 檢查 place 中元素的數量是否為 15
-                    dice(d,place, 0, [0],model)
-        print('moving'+str(moving))
-        place = np.full((column, row, height), -1)
-        i=end_game(d)
-        if(i==1):
-            return 1
-dicenames = ['mimic',
-                 'jocker',
-                 'assassin',
-                 'summon',
-                 'bubble'
-                 ]
-def in_the_game(d):
-    currentApp = d.app_list_running()
-    for i in currentApp:
-        #print(i)
-        if i == 'com.percent.royaldice':
-            return 1
-    return 0
+# def sup(d,reconciliation,model):
+#     while (1):
+#         check=in_the_game(d)
+#         if(check==0):
+#             break
+#         stage=Stage(d)
+#         #sct(d)
+#         if(stage>reconciliation):
+#             return 0
+#         #sct(d)
+#         if check>=20 and check<=25:pass #修改邏輯 不被獅子吼 所以不叫骰子 
+#         else:
+#             call_dice(d)
+#         # placedicedector(place,d, -1, -1, model)
+#         moving = 0
+#         location = len(place[place >= 0])
+#         # if (location >= 8):
+#         dice_number(d,'sup',place)
+#         moving += dice(d,place, 1, [2],model,'del')
+#         place = np.full((column, row, height), -1)
+#         for _ in range(4):
+#             # placedicedector(place, d=d, mode=model)
+#             dice_number(d, 'sup', place)
+#             if _ == 0:
+#                 moving += dice(d, place, 3, [3], model)
+#             elif _ == 1:
+#                 moving += dice(d, place, 1, [2], model, 'del')
+#             elif _ == 2:
+#                 moving += dice(d, place, 2, [0, 2], model)
+#             elif _ == 3:
+#                 moving += dice(d, place, 3, [3, 0], model)
+#             place = np.full((column, row, height), -1)
+
+#         if (moving == 0):
+#             moving += dice(d,place, 1, [3],model)
+#             if (moving == 0):
+#                 #place要是滿的才能用
+#                 location = len(place[place >= 0])
+#                 if location == 15:  # 檢查 place 中元素的數量是否為 15
+#                     dice(d,place, 0, [0],model)
+#         print('moving'+str(moving))
+#         place = np.full((column, row, height), -1)
+#         i=end_game(d)
+#         if(i==1):
+#             return 1
+
+
 def bubble_sup(d,reconciliation,model):
     column, row, height = 3, 5, 2
     place = np.empty((column, row, height))
@@ -831,16 +572,11 @@ def bubble_sup(d,reconciliation,model):
             break
 
 def dicer_att(adb_devices,q):
-
     attctrl=ctrl_game(adb_devices,reader,q) 
     while(attctrl.check_ingame()):pass
     d = attctrl.d
     global count
     attctrl.opengame()
-    # if (count==1):
-        # shop=Store_Refresh.Shop(d,reader=reader)
-        # if(shop.buy_and_fresh()):
-        #     threading.Thread(target=reset).start()
     attctrl.open_room()
     roomnum=attctrl.room_num()
     print(roomnum)
@@ -851,9 +587,7 @@ def dicer_att(adb_devices,q):
     while(not attctrl.check_ingame()):
         print(time.time()-start_time)
         if (time.time()-start_time>120):
-            # attctrl.begin_button()
-            # start_time=time.time()
-            #結束此執行序
+
             q.put(-10)
             d.app_stop('com.percent.royaldice')
             return 
@@ -968,3 +702,4 @@ if __name__ == '__main__':
                 print('無法終止線程')
             else:
                 print('線程已終止')
+        
