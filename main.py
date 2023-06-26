@@ -1,12 +1,9 @@
 import os
+from multiprocessing import Process, Queue
 import random
 import threading
 import time
-from cmath import sqrt
-from multiprocessing import Process, Queue
-
 import cv2
-# 連接手機
 import easyocr
 import numpy as np
 import torch
@@ -15,9 +12,9 @@ from adbutils import adb
 
 import Store_Refresh
 import watchAd
+from model import Classifier, models
 from pic_tranform import *
-from model import Classifier
-from model import models
+
 from torch import nn
 
 
@@ -32,16 +29,22 @@ class ctrl_game():
         self.act=act
         self.height=960
         self.width=540
-    def get_str(self,x1,x2,y1,y2):
-        while 1:
-            img=get_screenshot(self.d)# self.d.screenshot(format='opencv')
-            img=cv2.cvtColor(img[y1:y2,x1:x2],cv2.COLOR_BGR2GRAY)
-            break
-        result=self.reader.readtext(img) # replace () with []
-        if len(result)>0:
+    def get_screenshot(self, format='opencv'):
+        img = None
+        while img is None:
+            img = self.d.screenshot(format=format)
+        return img
+    def get_str(self, x1:int, x2:int, y1:int, y2:int):
+        img = self.get_screenshot()
+        img = img[y1:y2, x1:x2]
+        img = cv2.cvtColor(np.array(img), cv2.COLOR_BGR2GRAY)
+
+        result = self.reader.readtext(img)
+        if result:
             return result
         else:
             return []
+
 
     def updata_game(self):
         self.d.click(368,590)
@@ -52,7 +55,7 @@ class ctrl_game():
                 break
         while not self.d.xpath('//*[@content-desc="開始玩"]'):
             print('start') 
-        self.d.xpath('//*[@content-desc="開始玩"]')()
+        self.d.xpath('//*[@content-desc="開始玩"]').click()
     def in_the_game(self):
         currentApp = self.d.app_list_running()
         for i in currentApp:
@@ -215,9 +218,11 @@ class ctrl_game():
         if  result:
             return True
         return False
+    def crop_image(self,img, x1, y1, x2, y2):
+        return img[y1:y2, x1:x2]
     def check_times(self):
         while(1):
-            crop_img=crop_image(get_screenshot(self.d), 290, 710, 510, 800)
+            crop_img=self.crop_image(self.get_screenshot(), 290, 710, 510, 800)
             result = self.reader.readtext(crop_img)
             for i in range(0,len(result)):
                 if '合作模式'in result[i][1]:
@@ -255,6 +260,7 @@ num_classes = 64
 dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
 dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
 dicetype_num_model.eval()
+
 reader = easyocr.Reader(['ch_tra'], gpu = True)    
 class play():
     def __init__(self,devices,reader,q:Queue,player='att'):
@@ -300,8 +306,8 @@ class play():
         pointx = int(j * 62.7 + 144)
         pointy = i * 60 + 512
         img2 = img[pointy - 32:pointy + 30, pointx - 30:pointx + 32]
-        cv2.imshow('test', img2)
-        cv2.waitKey(0)
+        # cv2.imshow('test', img2)
+        # cv2.waitKey(0)
         img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
         img2 = Image.fromarray(img2)
         dicenum, dicetype = detect_single_dice(img2, self.player, self.model)
@@ -364,8 +370,8 @@ class play():
             img = self.crop_image(img, 850, 890, 240, 320)
             result = self.reader.readtext(img)
             if result:
-                for index, text in result:
-                    if text == '確認':
+                for text in result:
+                    if text[1] == '確認':
                         for _ in range(3):
                             self.d.click(270, 870)
                             time.sleep(2)
@@ -379,11 +385,13 @@ class play():
     def move_dice(self, row, column, target_x, target_y, touch_time):
         try:
             # Simulate pressing the dice
+            # print(row, column, target_x, target_y)
             start_x = column * 62 + 120 + random.randint(25, 40)
             start_y = row * 60 + 470 + random.randint(25, 40)
-            end_x = int(target_x) * 62 + 120 + random.randint(25, 40)
-            end_y = int(target_y) * 60 + 480+ random.randint(25, 40)
-            self.d.swipe(start_x, start_y, end_x, end_y, 0.05)
+            end_x = int(target_x) * 62 + 480 + random.randint(25, 40)
+            end_y = int(target_y) * 60 + 120 + random.randint(25, 40)
+            # print(start_x, start_y, end_y, end_x)
+            self.d.swipe(start_x, start_y, end_y, end_x, 0.05)
         except Exception as err:
             print(err)
             pass
@@ -409,29 +417,34 @@ class play():
                 break
             chosen = random.choice(range(len(target)))
             selected = target.pop(chosen) if remove else target[chosen]
+            if i[0]==selected[0] and i[1]==selected[1] and len(target)!=0:
+                continue
             self.move_dice(i[0], i[1], selected[0], selected[1], 0.05)
 
     def move_single_dice(self, use, target, remove):
         chosen = random.choice(range(len(target)))
         selected = target.pop(chosen)
         self.move_dice(use[0][0], use[0][1], selected[0], selected[1], 0.05)
+    dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
     def yinyun_attack(self):
         game_end = False
         know=0
         while(not game_end):
             self.wave=max(self.wave,self.get_wave())
-            if(self.wave>=20 & know==0):
+            if(self.wave>=20 and know==0):
                 self.q.put("暗殺")
                 know=1
             self.call_dice()
             self.get_place()
-            for i in range(1,3):
-                self.mergydice(2,i,0,i,True,False,[])
+            for i in range(1,7):
+                self.mergydice(2,i,0,i,True,False,[])#小丑複製成長
             for i in range(1,8):
-                self.mergydice(2,i,1,i,True,False,[])
+                self.mergydice(2,i,1,i,True,False,[])#小丑複製陰陽
             for i in range(1,8):
-                self.mergydice(3,i,2,i,True,True,[])
-            yinyun_num = np.sum(self.place[:, :,1] == 1)
+                self.mergydice(3,i,1,i,True,True,[])#營養餵給陰陽
+
+            yinyun_num = len(np.where(self.place[:, :, 0] == 1)[0])
+            print(yinyun_num)
             if (yinyun_num == 15):
                 self.q.put("暗殺")
                 return 1
@@ -439,139 +452,65 @@ class play():
             if(game_end):
                 self.q.put("end_game")
                 return 0
-    def sup_yinyun(self):
+    def sup_yinyun(self,wave):
         game_end = False
         while(not game_end):
             self.wave=max(self.wave,self.get_wave())
             if (self.wave <20 or self.wave>25):
-                self.call_dice()           
+                self.call_dice()       
+            if(self.wave>=wave):
+                return    
             self.get_place()
-            for _ in range(4):
-                if _ == 0:
-                    for i in range(1,8):
-                        self.mergydice(3,i, 3,i, True, True, [])
-                elif _ == 1:
-                    for i in range(1,8):
-                        self.mergydice(1,i, 2,i, True, False, [])
-                elif _ == 2:
-                    for i in range(1,8):
-                        self.mergydice(2,i, 0,i, True, True, [])
-                    for i in range(1,8):
-                        self.mergydice(2,i, 2,i, True, True, [])
-                elif _ == 3:
-                    for i in range(1,8):
-                        self.mergydice(3,i, 3,i, True, True, [])
-                    for i in range(1,8):
-                        self.mergydice(3,i, 0,i, True, True, [])
+            for i in range(1,8):
+                self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
+            for i in range(1,8):
+                self.mergydice(1,i, 2,i, True, False, [])#小丑複製暗殺
+           
+            for i in range(1,8):
+                self.mergydice(2,i, 0,i, True, True, [])#暗殺合成適應
+
+            for i in range(1,8):
+                self.mergydice(2,i, 2,i, True, True, [])#暗殺合成暗殺
+            for i in range(1,8):
+                self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
+            for i in range(1,8):
+                self.mergydice(3,i, 0,i, True, True, [])#招喚合成適應
             
+            game_end=self.end_game()
+            if(game_end):
+                self.q.put("end_game")
+                return 0
+    def bubble_sup(self):
+        game_end = False
+        while(not game_end):
+            self.wave=max(self.wave,self.get_wave())  
+            self.get_place()
+            for i in range(1,8):
+                self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
+            for i in range(1,8):
+                self.mergydice(1,i, 4,i, True, False, [])#小丑複製泡泡
+            for i in range(1,8):
+                self.mergydice(1,i, 3,i, True, False, [])#小丑複製招喚
+            for i in range(1,8):
+                self.mergydice(3,i, 3,i, True, False, []) #招喚合成招喚
+            for i in range(1,8):
+                self.mergydice(1,i, 4,i, True, False, [])#小丑複製泡泡
+            for i in range(1,8):
+                self.mergydice(4,i, 0,i, True, True, [])#泡泡合成適應
+            for i in range(1,8):
+                self.mergydice(4,i, 4,i, True, False, [])#泡泡合成泡泡
             game_end=self.end_game()
             if(game_end):
                 self.q.put("end_game")
                 return 0
 error=0
 dicenames = ['mimic','jocker','assassin','summon', 'bubble']
-import random
-
-dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
 
 
-# def sup(d,reconciliation,model):
-#     while (1):
-#         check=in_the_game(d)
-#         if(check==0):
-#             break
-#         stage=Stage(d)
-#         #sct(d)
-#         if(stage>reconciliation):
-#             return 0
-#         #sct(d)
-#         if check>=20 and check<=25:pass #修改邏輯 不被獅子吼 所以不叫骰子 
-#         else:
-#             call_dice(d)
-#         # placedicedector(place,d, -1, -1, model)
-#         moving = 0
-#         location = len(place[place >= 0])
-#         # if (location >= 8):
-#         dice_number(d,'sup',place)
-#         moving += dice(d,place, 1, [2],model,'del')
-#         place = np.full((column, row, height), -1)
-#         for _ in range(4):
-#             # placedicedector(place, d=d, mode=model)
-#             dice_number(d, 'sup', place)
-#             if _ == 0:
-#                 moving += dice(d, place, 3, [3], model)
-#             elif _ == 1:
-#                 moving += dice(d, place, 1, [2], model, 'del')
-#             elif _ == 2:
-#                 moving += dice(d, place, 2, [0, 2], model)
-#             elif _ == 3:
-#                 moving += dice(d, place, 3, [3, 0], model)
-#             place = np.full((column, row, height), -1)
-
-#         if (moving == 0):
-#             moving += dice(d,place, 1, [3],model)
-#             if (moving == 0):
-#                 #place要是滿的才能用
-#                 location = len(place[place >= 0])
-#                 if location == 15:  # 檢查 place 中元素的數量是否為 15
-#                     dice(d,place, 0, [0],model)
-#         print('moving'+str(moving))
-#         place = np.full((column, row, height), -1)
-#         i=end_game(d)
-#         if(i==1):
-#             return 1
 
 
-def bubble_sup(d,reconciliation,model):
-    column, row, height = 3, 5, 2
-    place = np.empty((column, row, height))
-    place = np.full((column, row, height), -1)
-    while (1):
-        # placedicedector(place,-1,-1,supmodel)
-        check=in_the_game(d)
-        if(check==0):
-            break
-        #sct(d)
-        stage=Stage(d)
-        #sct(d)
-        call_dice(d)
-        if(stage>reconciliation):
-            break
-        placedicedector(place,d, -1, -1, model)
-        moving = 0
-        location = len(place[place >= 0])
-        # print(location)
-        if (location >= 8):
-            #placedicedector(place,d=d, mode=model)
-            dice_number(d,'sup',place)
-        '''for i in range(0, 3):
-            for j in range(0, 5):
-                try:
-                    print(place[i][j][0], dicenames[int(
-                        place[i][j][1])], end="  ")
-                except:
-                    pass
-            print()
-        print()'''
-        moving += dice(d,place, 3, [3],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 1, [4, 3],model,'del')
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 3, [3],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 4, [0, 4],model)
-        placedicedector(place,d=d, mode=model)
-        dice_number(d,'sup',place)
-        moving += dice(d,place, 3, [3, 0],model)
-        place = np.full((column, row, height), -1)
-        i=end_game(d)
-        if(i==1):
-            break
 
-def dicer_att(adb_devices,q):
+def dicer_att(adb_devices,q:Queue):
     attctrl=ctrl_game(adb_devices,reader,q) 
     while(attctrl.check_ingame()):pass
     d = attctrl.d
@@ -587,33 +526,32 @@ def dicer_att(adb_devices,q):
     while(not attctrl.check_ingame()):
         print(time.time()-start_time)
         if (time.time()-start_time>120):
-
-            q.put(-10)
+            q.put('房間開啟失敗')
             d.app_stop('com.percent.royaldice')
             return 
         time.sleep(1)
-    check=attack(d,attackmodel,q)
+    q.put('房間開啟成功')
+    attack_game_ctrl=play(d,reader,q,player='att')
+    check=attack_game_ctrl.yinyun_attack()
     if(check!=0):
-        level_up(d,[0])
-        # d.app_stop('com.percent.royaldice')
-        q.put(1)
-    else:
-        q.put(0)
-    place=np.full((3,5,2),-1)
-    while(not end_game(d)):
-        dice_number(d,'atta',place)
+        attack_game_ctrl.level_up([0])
+
+    while(not attack_game_ctrl.end_game()):
+        # dice_number(d,'atta',place)
         time.sleep(5)
         
 
 
-def dicer_sup(adb_devices,q):
+def dicer_sup(adb_devices,q:Queue):
     supctrl=ctrl_game(adb_devices,reader,q,act='sup') 
     d =supctrl.d
     supctrl.opengame()
     supctrl.open_room()
-    
-    while(q.empty()):pass
+    while(q.empty()):
+        time.sleep(0.2)
     roomnum=q.get()
+    sup_game_ctrl=play(d,reader,q,player='sup')
+
     time.sleep(5)
     supctrl.input_the_room_num(roomnum)
     start_time=time.time()
@@ -624,21 +562,19 @@ def dicer_sup(adb_devices,q):
             d.app_stop('com.percent.royaldice')
             break
         time.sleep(1)
-    if q.empty():pass    
-    else:
-        if(q.get()==-10):
+    if (q.get()=="房間開啟成功"):pass
+    elif(q.get()=="房間開啟失敗"):
             d.app_stop('com.percent.royaldice')
             return
     while(q.empty()):
         #sct(d)
-        call_dice(d)
-        
+        sup_game_ctrl.call_dice()
         time.sleep(1)
     time.sleep(3)
-    check=sup(d,62,supmodel)
+    check=sup_game_ctrl.sup_yinyun(62)
     if(check==0):
-        level_up(d,[4])
-        bubble_sup(d,1000,supmodel)
+        sup_game_ctrl.level_up([4])
+        sup_game_ctrl.bubble_sup()
     #num=q.put(1)
 global image_num
 image_num=0
@@ -655,12 +591,6 @@ def sct(d):
     image_num+=1
       
 reader = easyocr.Reader(['ch_tra'], gpu = True)     
-supmodel = torch.hub.load('ultralytics/yolov5',
-    'custom', path=r'best_sup.pt')
-attackmodel = torch.hub.load(
-        'ultralytics/yolov5', 'custom', path=r'best(2).pt')
-attackmodel.conf = 0.5
-supmodel.conf = 0.6
 
 def reset():
     global count
@@ -686,8 +616,8 @@ if __name__ == '__main__':
             f.write(result+'\n')
             f.close()
         queue = Queue(3)
-        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5560',queue) )
-        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5558',queue) )
+        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5556',queue) )
+        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5554',queue) )
         tatt.start()
         tsup.start()
         tatt.join(2000)
@@ -702,4 +632,8 @@ if __name__ == '__main__':
                 print('無法終止線程')
             else:
                 print('線程已終止')
+                d=u2.connect('emulator-5556')
+                d.app_stop('com.percent.royaldice')
+                d=u2.connect('emulator-5554')
+                d.app_stop('com.percent.royaldice')
         

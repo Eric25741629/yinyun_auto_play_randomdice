@@ -40,7 +40,7 @@ def detect_single_dice(img2,mode, model):
     if model:
         try:
             predictedtype_num=predict_single_image(img2,model)
-            print(predictedtype_num)
+            # print(predictedtype_num)
             #儲存圖片至data資料夾的預測結果資料夾中
             #檢查路徑是否存在，不存在則創建
             if predictedtype_num!=-1:
