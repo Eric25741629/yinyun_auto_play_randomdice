@@ -259,7 +259,8 @@ dicetype_num_model = models.mobilenet_v3_large(pretrained=True)
 num_classes = 64
 dicetype_num_model.classifier[-1] = nn.Linear(in_features=dicetype_num_model.classifier[-1].in_features, out_features=num_classes)
 dicetype_num_model.load_state_dict(torch.load(r'V3model_epoch_8.pth'))
-dicetype_num_model.eval()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+dicetype_num_model.eval().to(device)
 
 reader = easyocr.Reader(['ch_tra'], gpu = True)    
 class play():
@@ -287,32 +288,38 @@ class play():
             if(result!=[]):
                 numbers ="".join([x for x in result[0][1] if x.isdigit()])
                 if numbers:
-                    print('關卡:',int(numbers))
                     return int(numbers)
         return 0
 
 
     def get_place(self, who=None, path=None):
-        time.sleep(0.2)
+        # time.sleep(0.2)
         if who == 'test' and path is not None:
             img = cv2.imread(path)
         else:
             img = self.get_screenshot()
+
+        images = []  # 存储待预测的图像
+        indices = []  # 存储图像的索引，以便在预测后进行结果的保存
+
         for i in range(0, 3):
             for j in range(0, 5):
-                self.process_dice_image(img, i, j)
+                pointx = int(j * 62.7 + 144)
+                pointy = i * 60 + 512
+                img2 = img[pointy - 32:pointy + 30, pointx - 30:pointx + 32]
+                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
+                img2 = Image.fromarray(img2)
+                images.append(img2)
+                indices.append((i, j))
 
-    def process_dice_image(self, img, i, j):
-        pointx = int(j * 62.7 + 144)
-        pointy = i * 60 + 512
-        img2 = img[pointy - 32:pointy + 30, pointx - 30:pointx + 32]
-        # cv2.imshow('test', img2)
-        # cv2.waitKey(0)
-        img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-        img2 = Image.fromarray(img2)
-        dicenum, dicetype = detect_single_dice(img2, self.player, self.model)
-        self.place[i][j][0] = dicetype
-        self.place[i][j][1] = dicenum
+        # 进行预测
+        predictions = detect_dice(images, self.player, self.model)
+
+        # 将预测结果保存到 self.place 中
+        for pred, index in zip(predictions, indices):
+            i, j = index
+            self.place[i][j][0] = pred[1]  # 骰子类型
+            self.place[i][j][1] = pred[0]  # 骰子数目
 
     def printboardtype(self):
         for i in range(0,3):
@@ -338,23 +345,32 @@ class play():
                 x = 270 + random.randint(-5, 5)
                 y = 790 + random.randint(-5, 5)
                 self.d.click(x, y)
-    def level_up(self, dices):
-        times = 0
-        img = self.get_screenshot()  # 进行一次屏幕截图
-        while times <= 2:
-            level_list = [i for i, dice in enumerate(dices) if self._check_dice(img, dice)]
-            if not level_list:
-                times += 1
-            else:
-                for index in level_list:
-                    self.click_dice_multiple_times(index)
-                    time.sleep(2)
+    def level_up(self,dices):
+        times=0
+        while(1):
+            level_list=[]
+            img=self.get_screenshot()
+            for i in dices:
+                crop_img = img[900:945,50+i*100:130+i*100]
+                result = self.reader.readtext(crop_img)
+                print(result)
+                if(result!=[]):
+                    level_list.append(i)
+            if(level_list==[]):
+                times=times+1
+                if(times>2):
+                    break
+            for i in level_list:
+                for _ in range(0,random.randint(3,4)):
+                    self.d.click(80+i*100+int(random.random()*10), 900)
+                #d.click(80+i*100+int(random.random()*10), 900) 
+            time.sleep(2)
 
-    def click_dice_multiple_times(self, index):
-        random_offset = random.randint(-5, 5)
-        for _ in range(5, 9):
-            click_x = 80 + index * 100 + random_offset
-            self.d.click(click_x, 900)
+    # def click_dice_multiple_times(self, index):
+    #     random_offset = random.randint(-5, 5)
+    #     for _ in range(5, 9):
+    #         click_x = 80 + index * 100 + random_offset
+    #         self.d.click(click_x, 900)
 
 
     # 其他辅助函数
@@ -386,12 +402,12 @@ class play():
         try:
             # Simulate pressing the dice
             # print(row, column, target_x, target_y)
-            start_x = column * 62 + 120 + random.randint(25, 40)
-            start_y = row * 60 + 470 + random.randint(25, 40)
-            end_x = int(target_x) * 62 + 480 + random.randint(25, 40)
-            end_y = int(target_y) * 60 + 120 + random.randint(25, 40)
+            start_x = column * 62 + 120 + random.randint(25, 35)
+            start_y = row * 60 + 480 + random.randint(25, 40)
+            end_x = int(target_x) * 62 + 480 + random.randint(25, 35)
+            end_y = int(target_y) * 60 + 120 + random.randint(25, 35)
             # print(start_x, start_y, end_y, end_x)
-            self.d.swipe(start_x, start_y, end_y, end_x, 0.05)
+            self.d.swipe(start_x, start_y, end_y, end_x, 0.03)
         except Exception as err:
             print(err)
             pass
@@ -407,21 +423,33 @@ class play():
 
         if not cache:
             if use_all:
-                self.move_all_dices(use, target, remove)
+                self.move_all_dices(use, target, remove,use_type,use_num,target_type,target_num)
             else:
-                self.move_single_dice(use, target, remove)
+                self.move_single_dice(use, target, remove,use_type,use_num,target_type,target_num)
+        time.sleep(0.2)
         self.get_place()
-    def move_all_dices(self, use, target, remove):
+    def move_all_dices(self, use, target, remove, use_type, use_num, target_type, target_num):
         for i in use:
             if not target:
                 break
-            chosen = random.choice(range(len(target)))
-            selected = target.pop(chosen) if remove else target[chosen]
-            if i[0]==selected[0] and i[1]==selected[1] and len(target)!=0:
-                continue
-            self.move_dice(i[0], i[1], selected[0], selected[1], 0.05)
+            while True:
+                chosen = random.choice(range(len(target)))
+                selected = target.pop(chosen) if remove else target[chosen]
 
-    def move_single_dice(self, use, target, remove):
+                if i[0] == selected[0] and i[1] == selected[1]:
+                    if len(target) != 0:
+                        if remove:
+                            target.append(selected)
+                        continue
+                    else:
+                        break
+                self.move_dice(i[0], i[1], selected[0], selected[1], 0.03)
+
+                if remove and [i[0], i[1]] in target:
+                    target.remove([i[0], i[1]])
+                break
+
+    def move_single_dice(self, use, target, remove,use_type,use_num,target_type,target_num):
         chosen = random.choice(range(len(target)))
         selected = target.pop(chosen)
         self.move_dice(use[0][0], use[0][1], selected[0], selected[1], 0.05)
@@ -459,23 +487,20 @@ class play():
             if (self.wave <20 or self.wave>25):
                 self.call_dice()       
             if(self.wave>=wave):
-                return    
+                return 0   
             self.get_place()
             for i in range(1,8):
                 self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
             for i in range(1,8):
                 self.mergydice(1,i, 2,i, True, False, [])#小丑複製暗殺
-           
             for i in range(1,8):
                 self.mergydice(2,i, 0,i, True, True, [])#暗殺合成適應
-
             for i in range(1,8):
                 self.mergydice(2,i, 2,i, True, True, [])#暗殺合成暗殺
             for i in range(1,8):
                 self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
             for i in range(1,8):
                 self.mergydice(3,i, 0,i, True, True, [])#招喚合成適應
-            
             game_end=self.end_game()
             if(game_end):
                 self.q.put("end_game")
@@ -484,31 +509,35 @@ class play():
         game_end = False
         while(not game_end):
             self.wave=max(self.wave,self.get_wave())  
+            print('關卡:',int(self.wave))
+            self.call_dice() 
             self.get_place()
+            print('招喚合成招喚')
             for i in range(1,8):
                 self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
+            print('小丑複製泡泡')
             for i in range(1,8):
                 self.mergydice(1,i, 4,i, True, False, [])#小丑複製泡泡
+            print('小丑複製招喚')
             for i in range(1,8):
                 self.mergydice(1,i, 3,i, True, False, [])#小丑複製招喚
+            print('招喚合成招喚')
             for i in range(1,8):
-                self.mergydice(3,i, 3,i, True, False, []) #招喚合成招喚
+                self.mergydice(3,i, 3,i, True, True, []) #招喚合成招喚
+            print('小丑複製泡泡')
             for i in range(1,8):
-                self.mergydice(1,i, 4,i, True, False, [])#小丑複製泡泡
+                self.mergydice(1,i, 4,i, True, True, [])#小丑複製泡泡
+            print('泡泡合成適應')
             for i in range(1,8):
                 self.mergydice(4,i, 0,i, True, True, [])#泡泡合成適應
+            print('泡泡合成泡泡')
             for i in range(1,8):
-                self.mergydice(4,i, 4,i, True, False, [])#泡泡合成泡泡
+                self.mergydice(4,i, 4,i, True, True, [])#泡泡合成泡泡
             game_end=self.end_game()
             if(game_end):
-                self.q.put("end_game")
                 return 0
 error=0
 dicenames = ['mimic','jocker','assassin','summon', 'bubble']
-
-
-
-
 
 def dicer_att(adb_devices,q:Queue):
     attctrl=ctrl_game(adb_devices,reader,q) 
@@ -535,7 +564,6 @@ def dicer_att(adb_devices,q:Queue):
     check=attack_game_ctrl.yinyun_attack()
     if(check!=0):
         attack_game_ctrl.level_up([0])
-
     while(not attack_game_ctrl.end_game()):
         # dice_number(d,'atta',place)
         time.sleep(5)
