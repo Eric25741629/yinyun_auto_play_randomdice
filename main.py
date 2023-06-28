@@ -515,6 +515,8 @@ class play():
             print('招喚合成招喚')
             for i in range(1,8):
                 self.mergydice(3,i, 3,i, True, True, [])#招喚合成招喚
+            for i in range(1,8):
+                self.mergydice(0,i, 3,i, True, False, [])#小丑複製暗殺
             print('小丑複製泡泡')
             for i in range(1,8):
                 self.mergydice(1,i, 4,i, True, False, [])#小丑複製泡泡
@@ -571,6 +573,7 @@ def dicer_att(adb_devices,q:Queue):
 
 
 def dicer_sup(adb_devices,q:Queue):
+
     supctrl=ctrl_game(adb_devices,reader,q,act='sup') 
     d =supctrl.d
     supctrl.opengame()
@@ -644,6 +647,7 @@ if __name__ == '__main__':
             f.write(result+'\n')
             f.close()
         queue = Queue(3)
+
         tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5556',queue) )
         tatt = threading.Thread( target=dicer_att, args=( 'emulator-5554',queue) )
         tatt.start()
