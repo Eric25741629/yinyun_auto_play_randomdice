@@ -911,7 +911,7 @@ def dicer_sup(adb_devices,q):
         
         time.sleep(1)
     time.sleep(3)
-    check=sup(d,62,supmodel)
+    check=sup(d,54,supmodel)
     if(check==0):
         level_up(d,[4])
         bubble_sup(d,1000,supmodel)
@@ -978,3 +978,7 @@ if __name__ == '__main__':
                 print('無法終止線程')
             else:
                 print('線程已終止')
+                d=u2.connect('emulator-5560')
+                d.app_stop('com.percent.royaldice')
+                d=u2.connect('emulator-5558')
+                d.app_stop('com.percent.royaldice')
