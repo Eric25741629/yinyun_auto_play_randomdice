@@ -602,6 +602,7 @@ def dicer_sup(adb_devices,q:Queue):
         sup_game_ctrl.call_dice()
         time.sleep(1)
     time.sleep(3)
+
     check=sup_game_ctrl.sup_yinyun(62)
     if(check==0):
         sup_game_ctrl.level_up([4])
@@ -669,3 +670,4 @@ if __name__ == '__main__':
                 d=u2.connect('emulator-5554')
                 d.app_stop('com.percent.royaldice')
         
+
