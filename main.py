@@ -9,7 +9,7 @@ import numpy as np
 import torch
 import uiautomator2 as u2
 from adbutils import adb
-
+import math
 import Store_Refresh
 import watchAd
 from model import Classifier, models
@@ -295,20 +295,19 @@ class play():
     def get_place(self, who=None, path=None):
         # time.sleep(0.2)
         if who == 'test' and path is not None:
-            img = cv2.imread(path)
+            img = Image.open(path)
         else:
-            img = self.get_screenshot()
+            img = self.get_screenshot('pillow')
 
         images = []  # 存储待预测的图像
         indices = []  # 存储图像的索引，以便在预测后进行结果的保存
-
+        start_time=time.time()
         for i in range(0, 3):
             for j in range(0, 5):
                 pointx = int(j * 62.7 + 144)
                 pointy = i * 60 + 512
-                img2 = img[pointy - 32:pointy + 30, pointx - 30:pointx + 32]
-                img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-                img2 = Image.fromarray(img2)
+                img2 = img.crop((pointx - 30, pointy - 32, pointx + 32, pointy + 30))
+                # img2 = img2.convert('RGB')
                 images.append(img2)
                 indices.append((i, j))
 
@@ -320,7 +319,8 @@ class play():
             i, j = index
             self.place[i][j][0] = pred[1]  # 骰子类型
             self.place[i][j][1] = pred[0]  # 骰子数目
-
+        endtime=time.time()
+        print('get_place time:',endtime-start_time)
     def printboardtype(self):
         for i in range(0,3):
             for j in range(0,5):
@@ -402,12 +402,14 @@ class play():
         try:
             # Simulate pressing the dice
             # print(row, column, target_x, target_y)
+            
+            touch_time=math.sqrt(abs(row - target_x)**2 + abs(column - target_y)**2)
             start_x = column * 62 + 120 + random.randint(25, 35)
-            start_y = row * 60 + 480 + random.randint(25, 40)
+            start_y = row * 60 + 480 + random.randint(25, 35)
             end_x = int(target_x) * 62 + 480 + random.randint(25, 35)
             end_y = int(target_y) * 60 + 120 + random.randint(25, 35)
             # print(start_x, start_y, end_y, end_x)
-            self.d.swipe(start_x, start_y, end_y, end_x, 0.03)
+            self.d.swipe(start_x, start_y, end_y, end_x, 0.016*touch_time)
         except Exception as err:
             print(err)
             pass
@@ -448,6 +450,7 @@ class play():
                 if remove and [i[0], i[1]] in target:
                     target.remove([i[0], i[1]])
                 break
+            time.sleep(0.1)
 
     def move_single_dice(self, use, target, remove,use_type,use_num,target_type,target_num):
         chosen = random.choice(range(len(target)))
@@ -603,7 +606,7 @@ def dicer_sup(adb_devices,q:Queue):
         time.sleep(1)
     time.sleep(3)
 
-    check=sup_game_ctrl.sup_yinyun(62)
+    check=sup_game_ctrl.sup_yinyun(55)
     if(check==0):
         sup_game_ctrl.level_up([4])
         sup_game_ctrl.bubble_sup()
@@ -649,25 +652,27 @@ if __name__ == '__main__':
             f.close()
         queue = Queue(3)
 
-        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5556',queue) )
-        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5554',queue) )
+        tsup = threading.Thread( target=dicer_sup, args=( 'emulator-5560',queue) )
+        tatt = threading.Thread( target=dicer_att, args=( 'emulator-5558',queue) )
         tatt.start()
         tsup.start()
-        tatt.join(2000)
-        tsup.join(2000)
+        try:
+            tatt.join(2500)
+            tsup.join(2500)
         # 強制終止線程
-        if tsup.is_alive():
-            # 如果你確定線程在 join() 方法上阻塞，可以考慮使用下面的代碼來強制終止線程
-            tid = tsup.ident
-            res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(SystemExit))
-            if res > 1:
-                ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
-                print('無法終止線程')
-            else:
-                print('線程已終止')
-                d=u2.connect('emulator-5556')
-                d.app_stop('com.percent.royaldice')
-                d=u2.connect('emulator-5554')
-                d.app_stop('com.percent.royaldice')
+        except:
+            if tsup.is_alive():
+                # 如果你確定線程在 join() 方法上阻塞，可以考慮使用下面的代碼來強制終止線程
+                tid = tsup.ident
+                res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(SystemExit))
+                if res > 1:
+                    ctypes.pythonapi.PyThreadState_SetAsyncExc(tid, 0)
+                    print('無法終止線程')
+                else:
+                    print('線程已終止')
+                    d=u2.connect('emulator-5556')
+                    d.app_stop('com.percent.royaldice')
+                    d=u2.connect('emulator-5554')
+                    d.app_stop('com.percent.royaldice')
         
 
