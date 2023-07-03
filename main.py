@@ -345,8 +345,8 @@ class play():
         # 将预测结果保存到 self.place 中
         for pred, index in zip(predictions, indices):
             i, j = index
-            self.place[i][j][0] = pred[1]  # 骰子类型
-            self.place[i][j][1] = pred[0]  # 骰子数目
+            self.place[i][j][0] = pred[0]  # 骰子类型
+            self.place[i][j][1] = pred[1]  # 骰子数目
         endtime = time.time()
         print('get_place time:', endtime-start_time)
 
@@ -471,27 +471,39 @@ class play():
         time.sleep(0.2)
         self.get_place()
 
-    def move_all_dices(self, use, target, remove, use_type, use_num, target_type, target_num):
-        for i in use:
-            if not target:
-                break
-            while True:
-                chosen = random.choice(range(len(target)))
-                selected = target.pop(chosen) if remove else target[chosen]
+    def move_all_dices(self, starting_point, target, remove, use_type, use_num, target_type, target_num):
+        used = [0] * len(starting_point)
+        use_target = [0] * len(target)
+        random.shuffle(starting_point)
+        for i in range(len(starting_point)):
+            if use_target.count(1) == len(target) or used.count(1) == len(starting_point):
+                # 如果目标全部用完或起始全部用完，就返回
+                return
+            
+            if used[i] == 1:
+                # 如果起始已经用过，就跳过
+                continue
 
-                if i[0] == selected[0] and i[1] == selected[1]:
-                    if len(target) != 0:
-                        if remove:
-                            target.append(selected)
-                        continue
-                    else:
-                        break
-                self.move_dice(i[0], i[1], selected[0], selected[1], 0.03)
+            for j in range(len(target)):
+                if use_target[j] == 1 or target[j] == starting_point[i]:
+                    # 如果目标已经用过，或者目标和起始相同，就跳过
+                    continue
 
-                if remove and [i[0], i[1]] in target:
-                    target.remove([i[0], i[1]])
+                if remove:
+                    use_target[j] = 1
+
+                if target[j] in starting_point and remove:
+                    used[starting_point.index(target[j])] = 1
+
+                if starting_point[i] in target and remove:
+                    use_target[target.index(starting_point[i])] = 1
+                # print(starting_point[i], target[j])
+                self.move_dice(starting_point[i][0], starting_point[i][1], target[j][0], target[j][1], 0.05)
+                time.sleep(0.05)
                 break
-            time.sleep(0.1)
+
+            if remove:
+                used[i] = 1
 
     def move_single_dice(self, use, target, remove, use_type, use_num, target_type, target_num):
         chosen = random.choice(range(len(target)))
@@ -548,7 +560,15 @@ class play():
             for i in range(1, 8):
                 self.mergydice(3, i, 0, i, True, True, [])  # 招喚合成適應
             for i in range(1, 8):
-                self.mergydice(1, i, 3, i, True, False, [])  # 小丑複製招喚
+                know = np.where((self.place[:, :, 0] == 2) & (
+            self.place[:, :, 1] == i))
+                if (len(know[0]) > 0):
+                    continue
+                know = np.where((self.place[:, :, 0] == 3) & (
+            self.place[:, :, 1] == i))
+                if (len(know[0]) % 2 == 0):
+                    continue    
+                self.mergydice(1, i, 3, i, False, False, [])  # 小丑複製招喚
             game_end = self.end_game()
             if (game_end):
                 self.q.put("end_game")
