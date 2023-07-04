@@ -17,7 +17,51 @@ from model import Classifier, models
 from pic_tranform import *
 
 from torch import nn
-
+class gameview():
+    def __init__(self,devices,reader):
+        self.d=devices
+        self.reader=reader
+    def get_screenshot(self, format='opencv'):
+        img = None
+        while img is None:
+            img = self.d.screenshot(format=format)
+        return img    
+    def get_string(self):
+        img = self.get_screenshot()
+        # reader = easyocr.Reader(['ch_tra'], gpu = True)
+        result = reader.readtext(img, detail = 0)
+        return result
+    def choose_game(self):
+        result=self.get_string()
+        if '商店' in result and '背包' in result and '娛柴' in result and '社交' in result:
+            print('遊戲主介面')
+            return 'main'
+        if '公告' in result :
+            print('公告')
+            return 'news'
+            d.click(466,135)
+        if '賽季出席簿' in result:
+            print('賽季出席簿')
+            return 'season'
+        if '確認' in result:
+            print('確認')
+            return 'confirm'
+            d.click(265,666)
+        if '結合其他骰友的力量' in result and '並盡可能地阻擋出現的怪物' in result :
+            print('合作模式第一層')
+            return 'cooperation_first'
+            d.click(265,666)      
+        if '與好友一起進行遊戲' in result and '來場合作模式吧' in result :
+            print('合作模式第二層')
+            return 'cooperation_second'
+            d.click(265,666)
+        if '合作模式待機中.' in result and '開始' in result:
+            print('合作模式第三層')
+            return 'cooperation_third'
+            # d.click(265,666)
+        if '加入' in result and '請輸入編號!' in result:
+            print('合作模式第三層')
+            return 'cooperation_join_ok'
 
 # 遊玩前置作業
 class ctrl_game():
@@ -30,6 +74,7 @@ class ctrl_game():
         self.act = act
         self.height = 960
         self.width = 540
+        self.gameview=gameview(self.d,self.reader)
 
     def get_screenshot(self, format='opencv') -> np.ndarray or Image.Image:
         img = None
@@ -286,7 +331,36 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 dicetype_num_model.eval().to(device)
 
 reader = easyocr.Reader(['ch_tra'], gpu=True)
+def calculate_random_arc_coordinates(center, radius, start_point, end_point, randomness):
+    # 計算起始點和結束點之間的角度
+    start_angle = math.atan2(start_point[1] - center[1], start_point[0] - center[0])
+    end_angle = math.atan2(end_point[1] - center[1], end_point[0] - center[0])
 
+    # 將角度轉換為0到2π的範圍
+    start_angle = start_angle % (2 * math.pi)
+    end_angle = end_angle % (2 * math.pi)
+
+    # 計算起始角度到結束角度之間的角度差
+    angle_diff = end_angle - start_angle
+
+    # 確保角度差為正值
+    if angle_diff <= 0:
+        angle_diff += 2 * math.pi
+
+    # 分割角度差並計算對應的弧形座標
+    num_points = 100  # 弧形上的點數量
+    angle_increment = angle_diff / (num_points - 1)
+    arc_coordinates = []
+
+    for i in range(num_points):
+        angle = start_angle + i * angle_increment
+
+        # 引入隨機性
+        angle += random.uniform(-randomness, randomness)
+
+        x = center[0] + radius * math.cos(angle)
+        y = center[1] + radius * math.sin(angle)
+        arc_coordinates.append((x, y))
 
 class play():
     def __init__(self, devices, reader, q: Queue, player='att'):
@@ -298,7 +372,7 @@ class play():
         self.wave = 0
         # 一個3*5*2的矩陣
         self.place = np.full((3, 5, 2), -1)
-
+        self.gameview = gameview(self.d, self.reader)
     def get_screenshot(self, format='opencv'):
         img = None
         while img is None:
@@ -436,16 +510,27 @@ class play():
     def move_dice(self, row, column, target_x, target_y, touch_time):
         try:
             # Simulate pressing the dice
-            # print(row, column, target_x, target_y)
 
-            touch_time = math.sqrt(abs(row - target_x) **
-                                   2 + abs(column - target_y)**2)
+            # Calculate touch time based on distance between current position and target position
+            touch_time = math.sqrt((row - target_x) ** 2 + (column - target_y) ** 2)
+
+            # Add some randomness to the start and end positions
             start_x = column * 62 + 120 + random.randint(25, 35)
             start_y = row * 60 + 480 + random.randint(25, 35)
             end_x = int(target_x) * 62 + 480 + random.randint(25, 35)
             end_y = int(target_y) * 60 + 120 + random.randint(25, 35)
-            # print(start_x, start_y, end_y, end_x)
-            self.d.swipe(start_x, start_y, end_y, end_x, 0.016*touch_time)
+
+            # Calculate arc coordinates with randomness
+            center = ((start_x + end_x) / 2, (start_y + end_y) / 2)
+            radius = math.sqrt((start_x - end_x) ** 2 + (start_y - end_y) ** 2) / 2
+            start_point = (start_x, start_y)
+            end_point = (end_x, end_y)
+            randomness = 20  # Adjust the randomness value as needed
+
+            arc_coords = calculate_random_arc_coordinates(center, radius, start_point, end_point, randomness)
+
+            # Simulate the swipe action by following the arc coordinates
+            self.d.swipe_points(arc_coords, touch_time*0.05)
         except Exception as err:
             print(err)
             pass
@@ -540,7 +625,12 @@ class play():
 
     def sup_yinyun(self, wave):
         game_end = False
+        chcektime=time.time()
         while (not game_end):
+            if (chcektime-time.time()>10):
+                chcektime=time.time()
+                if(self.gameview.choose_game()=='main'):
+                    return 0
             self.wave = max(self.wave, self.get_wave())
             if (self.wave < 20 or self.wave > 25):
                 self.call_dice()
@@ -580,7 +670,12 @@ class play():
 
     def bubble_sup(self):
         game_end = False
+        chcektime=time.time()
         while (not game_end):
+            if (chcektime-time.time()>10):
+                chcektime=time.time()
+                if(self.gameview.choose_game()=='main'):
+                    return 0
             self.wave = max(self.wave, self.get_wave())
             print('關卡:', int(self.wave))
             self.call_dice()
@@ -754,7 +849,7 @@ if __name__ == '__main__':
                     print('無法終止線程')
                 else:
                     print('線程已終止')
-                    d = u2.connect('emulator-5556')
+                    d = u2.connect('emulator-5560')
                     d.app_stop('com.percent.royaldice')
-                    d = u2.connect('emulator-5554')
+                    d = u2.connect('emulator-5558')
                     d.app_stop('com.percent.royaldice')
