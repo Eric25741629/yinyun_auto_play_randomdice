@@ -497,9 +497,9 @@ class play():
 
                 if starting_point[i] in target and remove:
                     use_target[target.index(starting_point[i])] = 1
-                # print(starting_point[i], target[j])
+                print(starting_point[i], target[j])
                 self.move_dice(starting_point[i][0], starting_point[i][1], target[j][0], target[j][1], 0.05)
-                time.sleep(0.05)
+                time.sleep(0.1+random.random()*0.1)
                 break
 
             if remove:
@@ -561,6 +561,10 @@ class play():
                 self.mergydice(3, i, 0, i, True, True, [])  # 招喚合成適應
             for i in range(1, 8):
                 know = np.where((self.place[:, :, 0] == 2) & (
+            self.place[:, :, 1] == i))
+                if (len(know[0]) > 0):
+                    continue
+                know = np.where((self.place[:, :, 0] == 0) & (
             self.place[:, :, 1] == i))
                 if (len(know[0]) > 0):
                     continue
