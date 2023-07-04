@@ -42,8 +42,6 @@ def predict_images(images, model):
     return predictions
 
 
-
-
 def detect_dice(images, mode, model):
     if model:
         try:
@@ -63,7 +61,7 @@ def detect_dice(images, mode, model):
                                 dice_num = int(label_name[prediction][-1])
                                 dicetype = dicenames1.index(label_name[prediction][:-1])
                             
-                            results.append((dice_num, dicetype))
+                            results.append((dicetype,dice_num))
                         except Exception as e:
                             print(e)
                             results.append((999, 999))
