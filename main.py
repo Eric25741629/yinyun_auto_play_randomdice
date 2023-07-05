@@ -62,7 +62,14 @@ class gameview():
         if '加入' in result and '請輸入編號!' in result:
             print('合作模式第三層')
             return 'cooperation_join_ok'
-
+        if '網路連線不穩定'in result :
+            d.click(265,588)
+            time.sleep(2)
+            d.click(265,588)
+            time.sleep(5)
+            self.d.app_start("com.percent.royaldice", use_monkey=True, stop=True)
+            return 'network_error'
+        return 'none'
 # 遊玩前置作業
 class ctrl_game():
     def __init__(self, devices_ip, reader, q, act="att"):
@@ -739,7 +746,8 @@ def dicer_att(adb_devices, q: Queue):
     if (check != 0):
         attack_game_ctrl.level_up([0])
     while (not attack_game_ctrl.end_game()):
-        # dice_number(d,'atta',place)
+        if (attack_game_ctrl.gameview.choose_game()=="main"):
+            return
         time.sleep(5)
 
 
