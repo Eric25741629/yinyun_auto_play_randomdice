@@ -1,14 +1,9 @@
 # view.py
 import tools
 
-
-class gameview():
-    def __init__(self, d, reader, img_tool: tools.img_tool, str_tool: tools.str_tool, click_tool: tools.click_tool):
-        self.d = d
-        self.reader = reader
-        self.img_tool = img_tool
+class gameview:
+    def __init__(self,str_tool: tools.str_tool):
         self.str_tool = str_tool
-        self.click_tool = click_tool
 
     def choose_game(self):
         result = self.str_tool.get_text()
@@ -32,6 +27,7 @@ class gameview():
             'wait5': ['正進入遊戲等待隊伍中.'],
             'break': ['等待開始..'],
             'No_times': ['使用鑽石及觀看廣告', '補充1次', '補充5次'],
+            'No_times': ['使用鑽石及觀看廣告', '補充1次','補充10次'],
             'Known': ['合作模式入場次數補充完畢!']
         }
 
