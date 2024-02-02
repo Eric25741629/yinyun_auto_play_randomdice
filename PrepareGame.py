@@ -7,31 +7,32 @@ import random
 import os
 import cv2
 import numpy as np
+from Tools.Img_tool import img_tools
+import win32gui
+import easyocr
 
 
 class prepareGame():
-    def __init__(self, devices_ip, reader, q: Queue, act="att"):
-        self.d = u2.connect(devices_ip)  # 手機的IP
+    def __init__(self,d:u2.Device, devices_ip, reader:easyocr.Reader, q: Queue,img_tool:img_tools,str_tool:tools.str_tool,click_tool:tools.click_tool ,act="att"):
+        self.d = d
         self.devices_ip = devices_ip
         self.reader = reader
         self.q = q
         self.act = act
-        self.height = 960
-        self.width = 540
-        self.img_tool = tools.img_tool(self.d, reader)
-        self.str_tool = tools.str_tool(self.d, reader)
-        self.click_tool = tools.click_tool(
-            self.d, reader, self.height, self.width)
-        self.gameview = gameview(
-            self.d, self.reader, self.img_tool, self.str_tool, self.click_tool)
+        # self.height = 960
+        # self.width = 540
+        self.img_tool = img_tool
+        self.str_tool = str_tool
+        self.click_tool = click_tool
+        self.gameview = gameview(self.str_tool)
         self.action = {
-            'main': lambda: self.gameview.click_tool.click_str('合作模式'),
+            'main': lambda: self.click_tool.click_str('合作模式'),
             'news': lambda: self.click_tool.close(),
             'news1': lambda: self.click_tool.close(),
             'season': lambda: self.click_tool.close(),
-            'cooperation_first': lambda: self.click_tool.click_position(random.randint(360, 486), random.randint(330, 375)),
-            'cooperation_second': lambda: self.gameview.click_tool.click_str('與好友一起進行遊戲'),
-            'cooperation_third': lambda: self.gameview.click_tool.click_str('創建房間'),
+            'cooperation_first': lambda: self.click_tool.click_position(random.randint(266, 361), random.randint(340, 365)),
+            'cooperation_second': lambda: self.click_tool.click_str('與好友一起進行遊戲'),
+            'cooperation_third': lambda: self.click_tool.click_str('創建房間'),
             'join_room': lambda: self.click_tool.click_position(random.randint(295, 460), random.randint(530, 588)),
             'cooperation_wait': lambda: self.wait_all_player(),
             'cooperation_join': lambda: self.input_the_room_num(),
@@ -41,7 +42,7 @@ class prepareGame():
             'wait3': lambda: time.sleep(2),
             'wait4': lambda: time.sleep(0.5),
             'No_times': lambda: self.buy_times(),
-            'Known': lambda: self.gameview.click_tool.click_str('確認'),
+            'Known': lambda: self.click_tool.click_str('確認'),
 
         }
 
@@ -90,7 +91,7 @@ class prepareGame():
         time.sleep(3)
 
     def get_str(self, x1: int, x2: int, y1: int, y2: int):
-        img = self.gameview.img_tool.get_screenshot()
+        img = self.img_tool.get_screenshot()
         img = img[y1:y2, x1:x2]
         img = cv2.cvtColor(np.array(img), cv2.COLOR_BGR2GRAY)
         result = self.reader.readtext(img)
@@ -113,7 +114,7 @@ class prepareGame():
                              use_monkey=True, stop=True)
 
     def check_result(self, x1, y1, x2, y2):
-        result = self.gameview.str_tool.get_text(x1, y1, x2, y2)
+        result = self.str_tool.get_text(x1, y1, x2, y2)
         print(result)
         if result:
             return True
@@ -122,13 +123,13 @@ class prepareGame():
     def room_num(self):
         print('正在取得房間號碼')
         while (1):
-            result = self.gameview.str_tool.get_text(190, 300, 320, 350)
+            result = self.str_tool.get_text(190, 300, 320, 350)
             if (result != []):
                 break
         return int(result[0][1])
 
     def check_ingame(self):
-        result = self.gameview.str_tool.get_text(144, 225, 12, 49)
+        result = self.str_tool.get_text(144, 225, 12, 49)
         if result:
             return True
         return False
@@ -138,7 +139,7 @@ class prepareGame():
         self.q.put(num)
         while (1):
             try:
-                img = self.gameview.img_tool.get_screenshot()
+                img = self.img_tool.get_screenshot()
                 crop_img = img[670:750, 200:330]
                 b, g, r = crop_img[10, 10]
                 if (b <= 12 and b >= 8 and g >= 173 and g <= 174 and r >= 251 and r <= 255):
