@@ -42,7 +42,7 @@ def predict_images(images, model):
 
     predictions = []
     for i, index in enumerate(predicted_indices):
-        if torch.max(torch.tensor(probabilities[i])) > 0.9:
+        if torch.max(torch.tensor(probabilities[i])) > 0.8:
             predictions.append(index)
         else:
             predictions.append(-1)
@@ -52,6 +52,7 @@ def predict_images(images, model):
 
 def detect_dice(images, mode, model):
     if not model:
+        print('model is None')
         return []
     try:
         predictions = predict_images(images, model)
@@ -62,6 +63,7 @@ def detect_dice(images, mode, model):
     results = []
     for prediction in predictions:
         if prediction == -1:
+            results.append((-1, -1))
             continue
 
         if prediction == 7:  # background
@@ -74,7 +76,9 @@ def detect_dice(images, mode, model):
                 label_name[prediction][:-1]) if mode == 'sup' else dicenames1.index(label_name[prediction][:-1])
             results.append((dicetype, dice_num))
         except Exception as e:
-            print(e)
+            # print(e)
+            # #印出更多資訊
+            # print(prediction)
             results.append((-1, -1))
 
     return results
