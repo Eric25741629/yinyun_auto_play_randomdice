@@ -8,7 +8,7 @@ class AI_model():
         self.dicemodel=None
         self.wavemodel=None
         self.reader=None
-
+        self.load_model()
     def load_model(self):
         # dicemodel = models.mobilenet_v3_large(
         #     weights=True, progress=True)
