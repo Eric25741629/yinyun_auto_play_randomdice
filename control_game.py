@@ -142,7 +142,7 @@ class play():
                 image_list.append(img2)
         return image_list
 
-    def get_place(self, who=None, path=None,record=False):
+    def get_place(self, who=None, path=None,record=True):
 
         img = self.img_tool.get_screenshot('pillow', 'pywin32')
         images = self.spilt_dice(img)
@@ -152,7 +152,7 @@ class play():
         predictions = detect_dice(images, self.player, self.model)
         # 轉換為NumPy陣列
         numpy_array = np.array(predictions)
-        if (who == 'att'):
+        if (self.playmode == 'att'):
             dicenames1 = ['growning', 'yinyun', 'jocker', 'sup', 'broken_growning', ]
         else:
             dicenames1 = ['mimic', 'jocker', 'assassin', 'summon', 'bubble']
