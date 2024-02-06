@@ -385,8 +385,13 @@ class play():
             yinyun_num = len(np.where(self.place[:, :, 0] == 1)[0])
             print(yinyun_num)
             if (yinyun_num == 15):
-                self.q.put("暗殺")
-                return 1
+                self.get_place()
+
+                yinyun_num = len(np.where(self.place[:, :, 0] == 1)[0])
+                if yinyun_num == 15:
+                    self.q.put("暗殺")
+                    return 1
+                else:continue
             game_end = self.end_game()
             if (game_end):
                 self.q.put("end_game")
