@@ -79,7 +79,7 @@ class play():
         else:
             self.OFFSET_Y = 532
             self.OFFSET_X = 144
-        
+        self.not_to_save=[]
     def get_wave(self):
         try:
             img = self.img_tool.get_screenshot()
@@ -167,17 +167,26 @@ class play():
                     #保存圖片 創建record資料夾 在record資料夾中創建以dicename+點數命名的資料夾
                     if not os.path.exists('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1])):
                         os.mkdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))
-                    #檢查數量
+                    if '{}{}'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]) in self.not_to_save and reshaped_array[i][j][0] == -1:
+                        continue  
+                        
+                    #檢查數量 使用一個陣列保存查找到的數量
                     if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))) > 10000:
+                        self.not_to_save.append('{}{}'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))
                         continue
                     #保存圖片
                     if reshaped_array[i][j][0] == -1: #background
                         if not os.path.exists('./record3/{}{}'.format('background',0)):
                             os.mkdir('./record3/{}{}'.format('background',0))
+                        if '{}{}'.format('background',0) in self.not_to_save:
+                            continue
                         if len(os.listdir('./record3/{}{}/'.format('background',0))) > 10000:
+                            self.not_to_save.append('{}{}'.format('background',0))
                             continue
                         images[i*5+j].save('./record3/{}{}/{}.jpg'.format('background',0,time.time()))
                     else:    
+                        if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))) > 10000:
+                            continue
                         images[i*5+j].save('./record3/{}{}/{}.jpg'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1],time.time()))
             
         self.place = reshaped_array
