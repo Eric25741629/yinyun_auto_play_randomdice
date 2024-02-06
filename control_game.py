@@ -152,7 +152,7 @@ class play():
         predictions = detect_dice(images, self.player, self.model)
         # 轉換為NumPy陣列
         numpy_array = np.array(predictions)
-        if (self.playmode == 'att'):
+        if (self.player == 'att'):
             dicenames1 = ['growning', 'yinyun', 'jocker', 'sup', 'broken_growning', ]
         else:
             dicenames1 = ['mimic', 'jocker', 'assassin', 'summon', 'bubble']
