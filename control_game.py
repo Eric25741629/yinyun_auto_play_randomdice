@@ -174,6 +174,8 @@ class play():
                     if reshaped_array[i][j][0] == -1: #background
                         if not os.path.exists('./record3/{}{}'.format('background',0)):
                             os.mkdir('./record3/{}{}'.format('background',0))
+                        if len(os.listdir('./record3/{}{}/'.format('background',0))) > 10000:
+                            continue
                         images[i*5+j].save('./record3/{}{}/{}.jpg'.format('background',0,time.time()))
                     else:    
                         images[i*5+j].save('./record3/{}{}/{}.jpg'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1],time.time()))
