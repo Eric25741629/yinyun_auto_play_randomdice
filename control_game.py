@@ -167,6 +167,9 @@ class play():
                     #保存圖片 創建record資料夾 在record資料夾中創建以dicename+點數命名的資料夾
                     if not os.path.exists('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1])):
                         os.mkdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))
+                    #檢查數量
+                    if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))) > 10000:
+                        continue
                     #保存圖片
                     if reshaped_array[i][j][0] == -1: #background
                         if not os.path.exists('./record3/{}{}'.format('background',0)):
