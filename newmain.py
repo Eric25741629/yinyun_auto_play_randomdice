@@ -51,6 +51,7 @@ def dicer_att(window_name, adb_devices, q: Queue, AI_model: load_models.AI_model
     if (check != 0):
         attack_game_ctrl.level_up([0])
     while (not attack_game_ctrl.end_game()):
+        attack_game_ctrl.get_place()
         if (attack_game_ctrl.gameview.choose_game() == "main"):
             return
         time.sleep(5)
