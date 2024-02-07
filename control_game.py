@@ -17,6 +17,7 @@ import easyocr
 import calculate
 import load_models
 
+
 def calculate_random_arc_coordinates(center, radius, start_point, end_point, randomness):
     # 計算起始點和結束點之間的角度
     start_angle = math.atan2(
@@ -56,7 +57,7 @@ time_num = time.time()
 
 
 class play():
-    def __init__(self, devices:u2.Device,q: Queue, playermode, img_tool: img_tools, str_tool: tools.str_tool, click_tool: tools.click_tool, ai_model:load_models.AI_model, gamemodel='cooperation'):
+    def __init__(self, devices: u2.Device, q: Queue, playermode, img_tool: img_tools, str_tool: tools.str_tool, click_tool: tools.click_tool, ai_model: load_models.AI_model, gamemodel='cooperation'):
         self.d = devices
         self.reader = ai_model.reader
         self.player = playermode
@@ -79,18 +80,19 @@ class play():
         else:
             self.OFFSET_Y = 532
             self.OFFSET_X = 144
-        self.not_to_save=[]
+        self.not_to_save = []
+
     def get_wave(self):
         try:
             img = self.img_tool.get_screenshot()
             img = img[15:50, 120:250]
-            cv2.imshow('wave',img)
+            cv2.imshow('wave', img)
             cv2.waitKey(10)
             global image_num, time_num
             if (time.time()-time_num > 10):
                 if not os.path.exists('dice_img'):
                     os.mkdir('dice_img')
-                    
+
                 while (os.path.isfile(r"dice_img/{}.jpg".format(image_num))):
                     image_num += 1
                 cv2.imwrite(
@@ -127,7 +129,8 @@ class play():
                     if numbers:
                         return int(numbers)
             return 0
-    def spilt_dice(self,img = None):
+
+    def spilt_dice(self, img=None):
         if img == None:
             img = self.img_tool.get_screenshot('pillow')
         else:
@@ -142,18 +145,19 @@ class play():
                 image_list.append(img2)
         return image_list
 
-    def get_place(self, who=None, path=None,record=True):
+    def get_place(self, who=None, path=None, record=True):
 
         img = self.img_tool.get_screenshot('pillow', 'pywin32')
         images = self.spilt_dice(img)
         if self.player != 'sup':
-            cv2.imshow('img',cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR))
+            cv2.imshow('img', cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR))
             cv2.waitKey(1)
         predictions = detect_dice(images, self.player, self.model)
         # 轉換為NumPy陣列
         numpy_array = np.array(predictions)
         if (self.player == 'att'):
-            dicenames1 = ['growning', 'yinyun', 'jocker', 'sup', 'broken_growning', ]
+            dicenames1 = ['growning', 'yinyun',
+                          'jocker', 'sup', 'broken_growning', ]
         else:
             dicenames1 = ['mimic', 'jocker', 'assassin', 'summon', 'bubble']
         # 將一維陣列轉換為3x5的二維陣列
@@ -161,34 +165,39 @@ class play():
         if record:
             for i in range(3):
                 for j in range(5):
-                    #檢查是否有./record/資料夾
+                    # 檢查是否有./record/資料夾
                     if not os.path.exists('./record3/'):
                         os.mkdir('./record3/')
-                    #保存圖片 創建record資料夾 在record資料夾中創建以dicename+點數命名的資料夾
-                    if not os.path.exists('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1])):
-                        os.mkdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))
-                    if '{}{}'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]) in self.not_to_save and reshaped_array[i][j][0] == -1:
-                        continue  
-                        
-                    #檢查數量 使用一個陣列保存查找到的數量
-                    if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))) > 10000:
-                        self.not_to_save.append('{}{}'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))
+                    # 保存圖片 創建record資料夾 在record資料夾中創建以dicename+點數命名的資料夾
+                    if not os.path.exists('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1])):
+                        os.mkdir(
+                            './record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))
+                    if '{}{}'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]) in self.not_to_save and reshaped_array[i][j][0] == -1:
                         continue
-                    #保存圖片
-                    if reshaped_array[i][j][0] == -1: #background
-                        if not os.path.exists('./record3/{}{}'.format('background',0)):
-                            os.mkdir('./record3/{}{}'.format('background',0))
-                        if '{}{}'.format('background',0) in self.not_to_save:
+
+                    # 檢查數量 使用一個陣列保存查找到的數量
+                    if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))) > 10000:
+                        self.not_to_save.append('{}{}'.format(
+                            dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))
+                        continue
+                    # 保存圖片
+                    if reshaped_array[i][j][0] == -1:  # background
+                        if not os.path.exists('./record3/{}{}'.format('background', 0)):
+                            os.mkdir('./record3/{}{}'.format('background', 0))
+                        if '{}{}'.format('background', 0) in self.not_to_save:
                             continue
-                        if len(os.listdir('./record3/{}{}/'.format('background',0))) > 10000:
-                            self.not_to_save.append('{}{}'.format('background',0))
+                        if len(os.listdir('./record3/{}{}/'.format('background', 0))) > 10000:
+                            self.not_to_save.append(
+                                '{}{}'.format('background', 0))
                             continue
-                        images[i*5+j].save('./record3/{}{}/{}.jpg'.format('background',0,time.time()))
-                    else:    
-                        if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1]))) > 10000:
+                        images[i*5+j].save('./record3/{}{}/{}.jpg'.format(
+                            'background', 0, time.time()))
+                    else:
+                        if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))) > 10000:
                             continue
-                        images[i*5+j].save('./record3/{}{}/{}.jpg'.format(dicenames1[reshaped_array[i][j][0]],reshaped_array[i][j][1],time.time()))
-            
+                        images[i*5+j].save('./record3/{}{}/{}.jpg'.format(
+                            dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1], time.time()))
+
         self.place = reshaped_array
         # endtime = time.time()
         # print('get_place time:', endtime-start_time)
@@ -279,11 +288,12 @@ class play():
     def move_dice(self, row, column, target_x, target_y, touch_time):
         try:
             r = random.randint(25, 35)
-            print(f"Move dice from ({row}, {column}) to ({target_x}, {target_y})")
+            print(
+                f"Move dice from ({row}, {column}) to ({target_x}, {target_y})")
             self.d.swipe(column * 62 + 120 + r, row * 60 + self.OFFSET_Y + r,
                          target_y * 62 + 120 + r, target_x * 60 + self.OFFSET_Y + r, touch_time)
         except Exception as e:
-            print('303',e)
+            print('303', e)
 
     def mergydice(self, use_type: int, use_num: int, target_type: int, target_num: int, use_all: bool, remove: bool, cache: list):
         '''
@@ -292,39 +302,41 @@ class play():
         try:
             self.get_place(record=True)
             if not use_all:
-                    tar_counts = np.where((self.place[:, :, 0] == target_type) & (
-                        self.place[:, :, 1] == target_num))
-                    if (len(tar_counts[0]) % 2 == 0):
-                        return 0
+                tar_counts = np.where((self.place[:, :, 0] == target_type) & (
+                    self.place[:, :, 1] == target_num))
+                if (len(tar_counts[0]) % 2 == 0):
+                    return 0
             use_result = calculate.find_elements(self.place, use_type,
-                                            use_num)
+                                                 use_num)
             if use_type == target_type and use_num == target_num:
                 target_result = use_result
             else:
                 target_result = calculate.find_elements(self.place, target_type,
-                                                    target_num)
+                                                        target_num)
             if not use_result or not target_result:
                 return 0
             if remove:
-                connections = calculate.find_single_connections(use_result, target_result)
+                connections = calculate.find_single_connections(
+                    use_result, target_result)
             else:
-                connections = calculate.find_mult_connections(use_result, target_result)
+                connections = calculate.find_mult_connections(
+                    use_result, target_result)
             if not connections:
                 return 0
-            
+
             print(connections)
-            
+
             for connection in connections:
 
                 # print(
                 #     f"Connect {connection[0]} to {connection[1]} with distance {connection[2]:.2f}")
-                #檢查類型是否為int
+                # 檢查類型是否為int
                 # if not isinstance(connection[0][0], int) or not isinstance(connection[0][1], int) or not isinstance(connection[1][0], int) or not isinstance(connection[1][1], int):
                 #     print('不是int')
                 #     print(type(connection[0][0]), type(connection[0][1]), type(connection[1][0]), type(connection[1][1]))
                 #     # 轉換為int
                 self.move_dice(int(connection[0][0]), int(connection[0][1]),
-                            int(connection[1][0]),int(connection[1][1]),0.05)
+                               int(connection[1][0]), int(connection[1][1]), 0.05)
                 if not use_all:
                     tar_counts = np.where((self.place[:, :, 0] == target_type) & (
                         self.place[:, :, 1] == target_num))
@@ -333,8 +345,7 @@ class play():
             time.sleep(0.5)
             self.get_place()
         except Exception as e:
-            print('333',e)
-
+            print('333', e)
 
     def move_all_dices(self, starting_point, target, remove, use_type, use_num, target_type, target_num):
         used = [0] * len(starting_point)
@@ -405,12 +416,13 @@ class play():
                 if yinyun_num == 15:
                     self.q.put("暗殺")
                     return 1
-                else:continue
+                else:
+                    continue
             game_end = self.end_game()
             if (game_end):
                 self.q.put("end_game")
                 return 0
-    
+
     def test_sup_yinyun(self):
         chcektime = time.time()
         while (1):
@@ -448,17 +460,20 @@ class play():
                     continue
                 self.mergydice(1, i, 3, i, False, False, [])  # 小丑複製招喚
             time.sleep(5)
+
     def sup_yinyun(self, wave):
         game_end = False
         chcektime = time.time()
         while (not game_end):
-            if (chcektime-time.time() > 10):
-                chcektime = time.time()
-                # img = self.img_tool.get_screenshot()
-                if (self.gameview.choose_game() == 'main'):
-                    return 0
-            if abs(self.wave - self.get_wave()) < 10:
-                self.wave = max(self.wave, self.get_wave())
+            # if (chcektime-time.time() > 10):
+            # chcektime = time.time()
+            # img = self.img_tool.get_screenshot()
+            if (self.gameview.choose_game() == 'main'):
+                return 0
+            self.wave = 20
+            now_wave = self.get_wave()
+            if abs(self.wave - now_wave) < 10:
+                self.wave = max(self.wave, now_wave)
             print('關卡:', int(self.wave))
             if (self.wave < 20 or self.wave > 25):
                 self.call_dice()
