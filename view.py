@@ -1,8 +1,9 @@
 # view.py
 import tools
 
+
 class gameview:
-    def __init__(self,str_tool: tools.str_tool):
+    def __init__(self, str_tool: tools.str_tool):
         self.str_tool = str_tool
 
     def choose_game(self):
@@ -26,8 +27,8 @@ class gameview:
             'wait4': ['正在載入數據...'],
             'wait5': ['正進入遊戲等待隊伍中.'],
             'break': ['等待開始..'],
-            'No_times': ['使用鑽石及觀看廣告', '補充1次', '補充5次'],
-            'No_times': ['使用鑽石及觀看廣告', '補充1次','補充10次'],
+            'No_times5': ['使用鑽石及觀看廣告', '補充1次', '補充5次'],
+            'No_times': ['使用鑽石及觀看廣告', '補充1次', '補充10次'],
             'Known': ['合作模式入場次數補充完畢!']
         }
 
@@ -35,3 +36,7 @@ class gameview:
             if all(keyword in result for keyword in keywords):
                 return action
         return 'none'
+# if __name__ == '__main__':
+#     str1=['757', '118647', '通知', '使用鑽石及觀看廣告', '即可繼續進行合作模式', '距離重置剩餘 18:39:20', '補充1次', '補充5次', '30', '0']
+#     import mock
+#     game=gameview(mock)
