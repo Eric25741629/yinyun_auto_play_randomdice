@@ -13,7 +13,7 @@ import easyocr
 
 
 class prepareGame():
-    def __init__(self,d:u2.Device, devices_ip, reader:easyocr.Reader, q: Queue,img_tool:img_tools,str_tool:tools.str_tool,click_tool:tools.click_tool ,act="att"):
+    def __init__(self, d: u2.Device, devices_ip, reader: easyocr.Reader, q: Queue, img_tool: img_tools, str_tool: tools.str_tool, click_tool: tools.click_tool, act="att"):
         self.d = d
         self.devices_ip = devices_ip
         self.reader = reader
@@ -42,7 +42,9 @@ class prepareGame():
             'wait3': lambda: time.sleep(2),
             'wait4': lambda: time.sleep(0.5),
             'No_times': lambda: self.buy_times(),
+            'No_times5': lambda: self.buy_times(),
             'Known': lambda: self.click_tool.click_str('確認'),
+            'network_error': lambda: self.click_tool.click_str('確認'),
 
         }
 
