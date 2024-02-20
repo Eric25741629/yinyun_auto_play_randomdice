@@ -145,7 +145,7 @@ class play():
                 image_list.append(img2)
         return image_list
 
-    def get_place(self, who=None, path=None, record=True):
+    def get_place(self, who=None, path=None, record=False):
 
         img = self.img_tool.get_screenshot('pillow', 'pywin32')
         images = self.spilt_dice(img)
@@ -162,41 +162,41 @@ class play():
             dicenames1 = ['mimic', 'jocker', 'assassin', 'summon', 'bubble']
         # 將一維陣列轉換為3x5的二維陣列
         reshaped_array = numpy_array.reshape(3, 5, 2)
-        if record:
-            for i in range(3):
-                for j in range(5):
-                    # 檢查是否有./record/資料夾
-                    if not os.path.exists('./record3/'):
-                        os.mkdir('./record3/')
-                    # 保存圖片 創建record資料夾 在record資料夾中創建以dicename+點數命名的資料夾
-                    if not os.path.exists('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1])):
-                        os.mkdir(
-                            './record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))
-                    if '{}{}'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]) in self.not_to_save and reshaped_array[i][j][0] == -1:
-                        continue
+        # if record:
+        #     for i in range(3):
+        #         for j in range(5):
+        #             # 檢查是否有./record/資料夾
+        #             if not os.path.exists('./record3/'):
+        #                 os.mkdir('./record3/')
+        #             # 保存圖片 創建record資料夾 在record資料夾中創建以dicename+點數命名的資料夾
+        #             if not os.path.exists('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1])):
+        #                 os.mkdir(
+        #                     './record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))
+        #             if '{}{}'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]) in self.not_to_save and reshaped_array[i][j][0] == -1:
+        #                 continue
 
-                    # 檢查數量 使用一個陣列保存查找到的數量
-                    if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))) > 10000:
-                        self.not_to_save.append('{}{}'.format(
-                            dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))
-                        continue
-                    # 保存圖片
-                    if reshaped_array[i][j][0] == -1:  # background
-                        if not os.path.exists('./record3/{}{}'.format('background', 0)):
-                            os.mkdir('./record3/{}{}'.format('background', 0))
-                        if '{}{}'.format('background', 0) in self.not_to_save:
-                            continue
-                        if len(os.listdir('./record3/{}{}/'.format('background', 0))) > 10000:
-                            self.not_to_save.append(
-                                '{}{}'.format('background', 0))
-                            continue
-                        images[i*5+j].save('./record3/{}{}/{}.jpg'.format(
-                            'background', 0, time.time()))
-                    else:
-                        if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))) > 10000:
-                            continue
-                        images[i*5+j].save('./record3/{}{}/{}.jpg'.format(
-                            dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1], time.time()))
+        #             # 檢查數量 使用一個陣列保存查找到的數量
+        #             if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))) > 10000:
+        #                 self.not_to_save.append('{}{}'.format(
+        #                     dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))
+        #                 continue
+        #             # 保存圖片
+        #             if reshaped_array[i][j][0] == -1:  # background
+        #                 if not os.path.exists('./record3/{}{}'.format('background', 0)):
+        #                     os.mkdir('./record3/{}{}'.format('background', 0))
+        #                 if '{}{}'.format('background', 0) in self.not_to_save:
+        #                     continue
+        #                 if len(os.listdir('./record3/{}{}/'.format('background', 0))) > 10000:
+        #                     self.not_to_save.append(
+        #                         '{}{}'.format('background', 0))
+        #                     continue
+        #                 images[i*5+j].save('./record3/{}{}/{}.jpg'.format(
+        #                     'background', 0, time.time()))
+        #             else:
+        #                 if len(os.listdir('./record3/{}{}/'.format(dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1]))) > 10000:
+        #                     continue
+        #                 images[i*5+j].save('./record3/{}{}/{}.jpg'.format(
+        #                     dicenames1[reshaped_array[i][j][0]], reshaped_array[i][j][1], time.time()))
 
         self.place = reshaped_array
         # endtime = time.time()
@@ -335,15 +335,16 @@ class play():
                 #     print('不是int')
                 #     print(type(connection[0][0]), type(connection[0][1]), type(connection[1][0]), type(connection[1][1]))
                 #     # 轉換為int
+                move_time = 0.02+random.random()*0.01
                 self.move_dice(int(connection[0][0]), int(connection[0][1]),
-                               int(connection[1][0]), int(connection[1][1]), 0.05)
+                               int(connection[1][0]), int(connection[1][1]), move_time)
                 if not use_all:
                     tar_counts = np.where((self.place[:, :, 0] == target_type) & (
                         self.place[:, :, 1] == target_num))
                     if (len(tar_counts[0]) % 2 == 1):
                         break
-            time.sleep(0.5)
-            self.get_place()
+            time.sleep(move_time+0.01)
+            # self.get_place()
         except Exception as e:
             print('333', e)
 
@@ -387,7 +388,42 @@ class play():
         selected = target.pop(chosen)
         self.move_dice(use[0][0], use[0][1], selected[0], selected[1], 0.05)
     dicelist = ['growning', 'yinyun', 'jocker', 'sup', 'broke_growning', ]
+    def count_dice_num(self, dice_type: int, dice_num: int):
+        return len(np.where((self.place[:, :, 0] == dice_type) & (
+            self.place[:, :, 1] == dice_num))[0])
 
+    def find_dice(self, dice_type: int):
+        result = np.where((self.place[:, :, 0] == dice_type))
+        # 合併兩個array
+        return np.vstack((result[0], result[1])).T
+
+    def find_the_same(self, dice_code: int):
+        summom_result = self.find_dice(dice_code)
+        # print(summom_result)
+        if len(summom_result) >= 1:
+            print(summom_result)
+            for i in summom_result:
+                # print(place[i[0], i[1], 1])
+                result = self.count_dice_num(
+                    dice_code, self.place[i[0], i[1], 1])
+                if result >= 2:
+                    # print(3, place[i[0], i[1], 1])
+                    return [dice_code, self.place[i[0], i[1], 1], dice_code, self.place[i[0], i[1], 1]]
+
+    def find_the_diff(self, dice_code1: int, dice_code2: int):
+        result1 = self.find_dice(dice_code1)
+        result2 = self.find_dice(dice_code2)
+        if not result1.any() or not result2.any():
+            return None
+        if len(result1) >= 1:
+            print(result1)
+            for i in result1:
+                # print(place[i[0], i[1], 1])
+                result = self.count_dice_num(
+                    dice_code2, self.place[i[0], i[1], 1])
+                if result >= 1:
+                    # print(3, place[i[0], i[1], 1])
+                    return [dice_code1, self.place[i[0], i[1], 1], dice_code2, self.place[i[0], i[1], 1]]
     def yinyun_attack(self):
         game_end = False
         know = 0
@@ -423,54 +459,42 @@ class play():
                 self.q.put("end_game")
                 return 0
 
-    def test_sup_yinyun(self):
-        chcektime = time.time()
-        while (1):
-            if (chcektime-time.time() > 10):
-                chcektime = time.time()
-            self.call_dice()
-            self.get_place()
-            self.printboardtype()
-            print('')
-            self.printboardnum()
-            for i in range(1, 8):
-                self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
-            for i in range(1, 8):
-                self.mergydice(1, i, 2, i, True, False, [])  # 小丑複製暗殺
-            for i in range(1, 8):
-                self.mergydice(2, i, 0, i, True, True, [])  # 暗殺合成適應
-            for i in range(1, 8):
-                self.mergydice(2, i, 2, i, True, True, [])  # 暗殺合成暗殺
-            for i in range(1, 8):
-                self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
-            for i in range(1, 8):
-                self.mergydice(3, i, 0, i, True, True, [])  # 招喚合成適應
-            for i in range(1, 8):
-                know = np.where((self.place[:, :, 0] == 2) & (
-                    self.place[:, :, 1] == i))
-                if (len(know[0]) > 0):
-                    continue
-                know = np.where((self.place[:, :, 0] == 0) & (
-                    self.place[:, :, 1] == i))
-                if (len(know[0]) > 0):
-                    continue
-                know = np.where((self.place[:, :, 0] == 3) & (
-                    self.place[:, :, 1] == i))
-                if (len(know[0]) % 2 == 0):
-                    continue
-                self.mergydice(1, i, 3, i, False, False, [])  # 小丑複製招喚
-            time.sleep(5)
+    def deside_status(self):
+        result = self.find_the_same(3)
+        if result is not None:
+            return result
+        result = self.find_the_diff(1, 2)
+        if result is not None:
+            return result
+        result = self.find_the_diff(2, 0)
+        if result is not None:
+            return result
+        result = self.find_the_same(2)
+        if result is not None:
+            return result
+        result = self.find_the_diff(3, 0)
+        if result is not None:
+            return result
+        return None
 
     def sup_yinyun(self, wave):
         game_end = False
         chcektime = time.time()
+        try:
+            wave = [self.get_wave(), self.get_wave(), self.get_wave()]
+            #取3次做平均
+            self.wave= int(wave[0]+wave[1]+wave[2]//3)
+        except:
+            '''此處若無問題 可以刪除'''
+            print("get_wave error")
+            wave=self.get_wave()
+            self.wave=wave
         while (not game_end):
             # if (chcektime-time.time() > 10):
             # chcektime = time.time()
             # img = self.img_tool.get_screenshot()
             if (self.gameview.choose_game() == 'main'):
                 return 0
-            self.wave = 20
             now_wave = self.get_wave()
             if abs(self.wave - now_wave) < 10:
                 self.wave = max(self.wave, now_wave)
@@ -479,33 +503,49 @@ class play():
                 self.call_dice()
             if (self.wave >= wave):
                 return 1
+            start = time.time()
             self.get_place()
-            for i in range(1, 8):
-                self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
-            for i in range(1, 8):
-                self.mergydice(1, i, 2, i, True, False, [])  # 小丑複製暗殺
-            for i in range(1, 8):
-                self.mergydice(2, i, 0, i, True, True, [])  # 暗殺合成適應
-            for i in range(1, 8):
-                self.mergydice(2, i, 2, i, True, True, [])  # 暗殺合成暗殺
-            for i in range(1, 8):
-                self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
-            for i in range(1, 8):
-                self.mergydice(3, i, 0, i, True, True, [])  # 招喚合成適應
-            for i in range(1, 8):
-                know = np.where((self.place[:, :, 0] == 2) & (
-                    self.place[:, :, 1] == i))
-                if (len(know[0]) > 0):
-                    continue
-                know = np.where((self.place[:, :, 0] == 0) & (
-                    self.place[:, :, 1] == i))
-                if (len(know[0]) > 0):
-                    continue
-                know = np.where((self.place[:, :, 0] == 3) & (
-                    self.place[:, :, 1] == i))
-                if (len(know[0]) % 2 == 0):
-                    continue
-                self.mergydice(1, i, 3, i, False, False, [])  # 小丑複製招喚
+            print('get_place time:', time.time()-start)
+            start = time.time()
+            result = self.deside_status()
+            print('deside_status time:', time.time()-start)
+            start = time.time()
+            if result is not None:
+                if result[0] == 1 and result[2] == 2:  # 小丑複製暗殺
+                    self.mergydice(result[0], result[1],
+                                   result[2], result[3], True, False, [])
+                else:
+                    self.mergydice(result[0], result[1],
+                                   result[2], result[3], True, True, [])
+                print('mergydice time:', time.time()-start)
+            # for i in range(1, 8):
+            #     self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
+            # for i in range(1, 8):
+            #     self.mergydice(1, i, 2, i, True, False, [])  # 小丑複製暗殺
+            # for i in range(1, 8):
+            #     self.mergydice(2, i, 0, i, True, True, [])  # 暗殺合成適應
+            # for i in range(1, 8):
+            #     self.mergydice(2, i, 2, i, True, True, [])  # 暗殺合成暗殺
+            # for i in range(1, 8):
+            #     self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
+            # for i in range(1, 8):
+            #     self.mergydice(3, i, 0, i, True, True, [])  # 招喚合成適應
+            else:
+                for i in range(1, 8):
+                    know = np.where((self.place[:, :, 0] == 2) & (
+                        self.place[:, :, 1] == i))
+                    if (len(know[0]) > 0):
+                        continue
+                    know = np.where((self.place[:, :, 0] == 0) & (
+                        self.place[:, :, 1] == i))
+                    if (len(know[0]) > 0):
+                        continue
+                    know = np.where((self.place[:, :, 0] == 3) & (
+                        self.place[:, :, 1] == i))
+                    if (len(know[0]) % 2 == 0):
+                        continue
+                    self.mergydice(1, i, 3, i, False, False, [])  # 小丑複製招喚
+                print('mergydice time:', time.time()-start)
             game_end = self.end_game()
             if (game_end):
                 self.q.put("end_game")
@@ -514,6 +554,15 @@ class play():
     def bubble_sup(self):
         game_end = False
         chcektime = time.time()
+        try:
+            wave = [self.get_wave(), self.get_wave(), self.get_wave()]
+            #取3次做平均
+            self.wave= int(wave[0]+wave[1]+wave[2]//3)
+        except:
+            '''此處若無問題 可以刪除'''
+            print("get_wave error")
+            wave=self.get_wave()
+            self.wave=wave
         while (not game_end):
             if (chcektime-time.time() > 10):
                 chcektime = time.time()
@@ -529,26 +578,41 @@ class play():
             print('招喚合成招喚')
             for i in range(1, 8):
                 self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
+                continue
             for i in range(1, 8):
                 self.mergydice(0, i, 3, i, True, False, [])  # 小丑複製暗殺
+                continue
+
             print('小丑複製泡泡')
             for i in range(1, 8):
                 self.mergydice(1, i, 4, i, True, False, [])  # 小丑複製泡泡
+                continue
+
             print('小丑複製招喚')
             for i in range(1, 8):
                 self.mergydice(1, i, 3, i, True, False, [])  # 小丑複製招喚
+                continue
+
             print('招喚合成招喚')
             for i in range(1, 8):
                 self.mergydice(3, i, 3, i, True, True, [])  # 招喚合成招喚
+                continue
+
             print('小丑複製泡泡')
             for i in range(1, 8):
                 self.mergydice(1, i, 4, i, True, True, [])  # 小丑複製泡泡
+                continue
+
             print('泡泡合成適應')
             for i in range(1, 8):
                 self.mergydice(4, i, 0, i, True, True, [])  # 泡泡合成適應
+                continue
+
             print('泡泡合成泡泡')
             for i in range(1, 8):
                 self.mergydice(4, i, 4, i, True, True, [])  # 泡泡合成泡泡
+                continue
+
             game_end = self.end_game()
             if (game_end):
                 return 0
