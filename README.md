@@ -248,6 +248,11 @@ ADB click / swipe actions
 本專案提供實機操作影片：**[觀看 Demo：PyTorch + uiautomator2 自動決策 Random Dice](https://www.youtube.com/watch?v=iudArQcVxY0)**。影片展示以 PyTorch 與 Android automation 為核心的自動決策流程；影片長度約 39 分 45 秒。
 
 ![YouTube Demo](https://img.youtube.com/vi/iudArQcVxY0/maxresdefault.jpg)
+### 雙模擬器協同執行
+
+下圖展示 VisionDice 同時控制攻擊方與輔助方兩個 Android Emulator，並根據遊戲畫面執行視覺辨識與自動操作。
+
+![VisionDice 雙模擬器協同執行](docs/assets/visiondice-dual-emulator-demo.gif)
 
 ## Model recognition example
 
@@ -264,4 +269,5 @@ ADB click / swipe actions
 ## Model files and Git LFS
 
 大型模型權重使用 Git LFS 管理。執行 git lfs install 與 git lfs pull 下載模型，並使用 git lfs ls-files 確認追蹤狀態。模型權重、訓練資料與遊戲素材公開前，請確認授權條件。
+
 
