@@ -1,2 +1,15 @@
-/__pycache__
-/開發中.ipynb
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+開發中.ipynb
+
+# Local runtime artifacts
+dice_img/
+NEW_RECORD/
+logs/
+
+# Model binaries are managed by Git LFS
+*.pt
+*.pth
