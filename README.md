@@ -245,7 +245,9 @@ ADB click / swipe actions
 
 ## Demo
 
-目前 repository 尚未包含可公開的實機錄影素材；不要用靜態截圖冒充操作 Demo。建議錄製雙 Emulator 從建立房間、加入房間到遊戲中自動辨識與操作的 20–60 秒影片，並放置於 docs/assets/demo.gif 或 docs/assets/demo.mp4。
+本專案提供實機操作影片：**[觀看 Demo：PyTorch + uiautomator2 自動決策 Random Dice](https://www.youtube.com/watch?v=iudArQcVxY0)**。影片展示以 PyTorch 與 Android automation 為核心的自動決策流程；影片長度約 39 分 45 秒。
+
+![YouTube Demo](https://img.youtube.com/vi/iudArQcVxY0/maxresdefault.jpg)
 
 ## Model recognition example
 
@@ -262,3 +264,4 @@ ADB click / swipe actions
 ## Model files and Git LFS
 
 大型模型權重使用 Git LFS 管理。執行 git lfs install 與 git lfs pull 下載模型，並使用 git lfs ls-files 確認追蹤狀態。模型權重、訓練資料與遊戲素材公開前，請確認授權條件。
+
